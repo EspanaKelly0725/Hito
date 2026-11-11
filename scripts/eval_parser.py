@@ -6,7 +6,11 @@ answer is known and scores field by field.
 
     python scripts/eval_parser.py                 # whichever engine is active
     python scripts/eval_parser.py --provider ollama --runs 3
+    python scripts/eval_parser.py --provider remote   # the hosted free model
     python scripts/eval_parser.py --provider rules
+
+Use it before trusting a model you have not measured - including the free one
+the hosted demo runs.
 
 Cases cover what actually varies between the contracts a freelancer receives:
 notation (US$3,000 / US$3.000 / 3000 USD), language, date format, and whether
@@ -146,8 +150,11 @@ def score(plan: dict, expect: dict) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--provider", choices=["auto", "ollama", "claude", "rules"],
-                        default="auto")
+    parser.add_argument(
+        "--provider",
+        choices=["auto", "ollama", "remote", "claude", "rules"],
+        default="auto",
+    )
     parser.add_argument("--runs", type=int, default=1,
                         help="repeat each case, to see how stable the model is")
     args = parser.parse_args()

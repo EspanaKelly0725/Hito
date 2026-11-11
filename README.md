@@ -364,15 +364,27 @@ the environment variables in the Render dashboard to point it at your real
 sandbox. There is also a `Dockerfile` for anywhere else. The frontend is
 pre-built and committed, so neither needs Node.
 
-A ~2 GB model does not fit a free Render instance, so the hosted demo runs the
-**same open-weights family through an OpenAI-compatible endpoint** — set
-`HITO_REMOTE_BASE_URL` and `HITO_REMOTE_API_KEY` in the dashboard and a visitor
-who only clicks the link still sees a model working. Unset, it falls back to
-the deterministic engine and says so.
+A ~2 GB model does not fit a free Render instance, so the hosted demo serves an
+open-weights model through an OpenAI-compatible endpoint instead — a visitor
+who only clicks the link still sees a model working.
 
-The honest trade: on that tier the contract leaves the machine. Running Hito
-locally is the version where it does not, which is why local is first in the
-chain and the default everywhere else.
+**It is not running Qwen2.5, and the reason is money.** Qwen2.5 is free on your
+own hardware, which is why Hito is built around it; having a provider serve it
+is metered, and this project has no budget for paid inference. So the hosted
+tier runs a *free* open-weights model, which is a different model, and the UI
+says `open weights` rather than `local` so nobody is misled. Give the
+deployment a budget and `HITO_REMOTE_MODEL=qwen/qwen3-32b` is the entire
+change — all four agents go through one wrapper and one JSON schema.
+
+**Judges who want to see the real engine:** it is one command, and the
+benchmark is reproducible.
+
+```bash
+ollama pull qwen2.5:3b     # then restart; the header reads qwen2.5:3b | local
+```
+
+The other trade on the hosted tier is that the contract leaves the machine.
+Locally it does not, which is why local goes first in the chain.
 
 ---
 

@@ -69,24 +69,60 @@ Pin one with `HITO_LLM_PROVIDER=ollama | remote | claude | rules`.
 
 A 2 GB model does not fit a free hosting instance, and the demo at
 <https://hito-zz3z.onrender.com> would otherwise show a rule engine to anyone
-who only clicks the link. So that deployment runs the **same open-weights
-family** through an OpenAI-compatible endpoint — Qwen3 32B, Apache-2.0,
-structured outputs, roughly $0.0003 for a full pass through the demo:
+who only clicks the link. So that deployment serves an open-weights model
+through an OpenAI-compatible endpoint instead:
 
 ```bash
 HITO_REMOTE_BASE_URL=https://openrouter.ai/api/v1
 HITO_REMOTE_API_KEY=sk-or-...
-HITO_REMOTE_MODEL=qwen/qwen3-32b
+HITO_REMOTE_MODEL=nvidia/nemotron-3.5-super-vl:free
 ```
 
 Any OpenAI-compatible endpoint works — OpenRouter, Groq, Together, your own
 vLLM. If the endpoint rejects a full JSON schema, the backend degrades to plain
 JSON mode with the schema in the prompt rather than failing.
 
-Be clear about what this tier gives up: the contract leaves the machine. That
-is the price of a demo anyone can click, and it is exactly why the local tier
-is the default and goes first. Run Hito on your own laptop and nothing is
-transmitted at all. Whatever actually ran
+### Why the hosted demo is not running Qwen2.5
+
+Plainly: **there is no budget for paid inference.** Qwen2.5 costs nothing to
+run on your own hardware, which is the entire point of choosing it — but
+having a provider serve it is metered, and this is a hackathon project with no
+funding behind it. The cheapest Apache-2.0 Qwen on OpenRouter is about
+$0.0003 per full pass through the demo, which is almost nothing and still more
+than zero, and paying for it needs a minimum credit top-up.
+
+So the hosted tier runs a **free** open-weights model instead. It is a
+different model from the one Hito is built around, and the README and the UI
+say so rather than letting the header imply otherwise.
+
+Two things make that an acceptable trade rather than a hole:
+
+1. **The engine is one environment variable.** Nothing in Hito is coupled to a
+   particular model — all four agents go through one wrapper and one JSON
+   schema. Give the deployment a budget and `HITO_REMOTE_MODEL=qwen/qwen3-32b`
+   is the whole change.
+2. **The real engine is one command away**, and a judge can check it in
+   minutes rather than taking our word for it:
+
+   ```bash
+   ollama pull qwen2.5:3b
+   uvicorn app.main:app              # header now reads qwen2.5:3b | local
+   python scripts/eval_parser.py --provider ollama
+   ```
+
+The free hosted model has **not** been benchmarked the way Qwen2.5 has — the
+24/24 in the table above is Qwen2.5 on a laptop, not the hosted model. Measure
+it before trusting it:
+
+```bash
+python scripts/eval_parser.py --provider remote
+```
+
+### What the hosted tier gives up
+
+The contract leaves the machine. That is the price of a demo anyone can click,
+and it is exactly why the local tier is the default and goes first in the
+chain. Run Hito on your own laptop and nothing is transmitted at all. Whatever actually ran
 is recorded per call in `agent_runs` and shown in the UI — the header says
 `AI: qwen2.5:3b · local`, and the rule engine is never dressed up as a model.
 

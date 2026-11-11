@@ -134,6 +134,24 @@ which flatters it because those regexes were written against that contract, and
 2/8 on prose, where there is simply no list to find. That gap is the reason
 there is a model at all, and the numbers are in `docs/OPEN_MODEL.md`.
 
+## A constraint we chose to state rather than hide
+
+Hito is built around Qwen2.5 3B because it is Apache-2.0, runs on a laptop CPU,
+and means a contract full of a client's personal and financial details never
+leaves the freelancer's machine. That argument only works when the model runs
+locally — and a 2 GB model does not fit a free hosting instance.
+
+Paying a provider to serve Qwen2.5 would cost about $0.0003 per demo run.
+Almost nothing, and still more than a hackathon project with no funding has.
+So the hosted demo runs a free open-weights model instead, the UI labels it
+`open weights` rather than `local`, and the README says why in one paragraph.
+
+The thing that makes this a footnote instead of a hole: the engine is one
+environment variable. All four agents go through a single wrapper and a single
+JSON schema, so the local model, a hosted one and Claude are interchangeable,
+and the deterministic fallback is always underneath. Give it a budget and the
+hosted demo runs Qwen2.5 with a one-line change.
+
 ## Challenges we ran into
 
 Calibrating the tone policy. The first version used hand-picked thresholds
@@ -179,12 +197,15 @@ advice at contract time: given this client's profile, ask for a deposit.
 Press *Seed history*, then *Use the sample contract*, and walk the five steps.
 It is on Render's free tier, so the first request can take ~50 seconds while
 the instance wakes up — after that it is instant. The hosted copy runs the
-in-process PayPal gateway and the deterministic engine, both labelled in the
-header, because a 2 GB open-source model does not fit a free instance and the
-whole argument for that model is that it runs on the freelancer's own machine.
+in-process PayPal gateway, and a free open-weights model rather than the
+Qwen2.5 that Hito is actually built around: a 2 GB model does not fit a free
+instance, and having a provider serve Qwen2.5 is metered inference this
+project has no budget for. The header says `open weights` instead of `local`
+so the difference is visible rather than implied.
 
-To see it with the real engine and real PayPal sandbox invoices, run it
-locally:
+**To see the real engine, Qwen2.5 running locally, it is one command** — and
+the benchmark in `docs/OPEN_MODEL.md` is reproducible, so you do not have to
+take our word for the numbers:
 
 ```bash
 git clone <repo> && cd hito
@@ -200,7 +221,8 @@ the header.
 To see it with the real engine, which needs no key either:
 
 ```bash
-ollama pull qwen2.5:3b        # ~2 GB, once
+ollama pull qwen2.5:3b                        # ~2 GB, once
+python scripts/eval_parser.py --provider ollama   # 24/24 vs 17/24 for regex
 ```
 
 Add PayPal sandbox credentials to `.env` for real invoices and payouts. Verify

@@ -40,12 +40,21 @@ services:
       # model below when it is configured, and the rule engine when it is not.
       - key: HITO_LLM_PROVIDER
         value: auto
-      # Qwen3 32B: Apache-2.0 open weights, structured outputs, and about
-      # $0.0003 per full demo run. Any OpenAI-compatible endpoint works.
+      # A FREE open-weights model, deliberately. Qwen2.5 - the model Hito
+      # actually runs - is self-hosted and costs nothing on your own machine,
+      # but serving it from a provider is metered and this project has no
+      # budget for paid inference. So the hosted demo runs a free open-weights
+      # model with the same JSON-schema contract, and the local path stays the
+      # real one. See docs/OPEN_MODEL.md.
+      #
+      # Free alternatives with schema support, if this one is rate-limited:
+      #   baidu/ernie-5.5-flash-preview:free
+      #   dots-studio/dots-3-note-preview:free
+      #   openrouter/free            (auto-routes across free models)
       - key: HITO_REMOTE_BASE_URL
         value: https://openrouter.ai/api/v1
       - key: HITO_REMOTE_MODEL
-        value: qwen/qwen3-32b
+        value: nvidia/nemotron-3.5-super-vl:free
       # Set this in the dashboard. Without it, the deterministic engine runs.
       - key: HITO_REMOTE_API_KEY
         sync: false

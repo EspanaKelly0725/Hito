@@ -61,7 +61,9 @@ class Settings:
     # Any OpenAI-compatible endpoint works (OpenRouter, Groq, Together, vLLM).
     remote_base_url: str = os.getenv("HITO_REMOTE_BASE_URL", "").strip().rstrip("/")
     remote_api_key: str = os.getenv("HITO_REMOTE_API_KEY", "").strip()
-    remote_model: str = os.getenv("HITO_REMOTE_MODEL", "qwen/qwen3-32b").strip()
+    remote_model: str = os.getenv(
+        "HITO_REMOTE_MODEL", "nvidia/nemotron-3.5-super-vl:free"
+    ).strip()
     remote_timeout: float = float(os.getenv("HITO_REMOTE_TIMEOUT", "120") or 120)
 
     # Claude, optional.

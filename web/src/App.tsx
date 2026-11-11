@@ -169,15 +169,25 @@ export default function App() {
     }
   }
 
-  async function seed() {
+  async function seed(clientEmail?: string) {
     try {
-      const result = await api.seedDemo()
+      const result = await api.seedDemo(clientEmail)
       toast.success("Client history seeded", {
-        description: `${result.history.invoices_settled} past invoices, ${Math.round(result.history.late_ratio * 100)}% paid late. The risk model reads this.`,
+        description: `${result.history.invoices_settled} past invoices for ${result.client_email}, ${Math.round(result.history.late_ratio * 100)}% paid late. The risk model reads this.`,
       })
       await refresh()
     } catch (error) {
       failed(error, "Could not seed the demo")
+    }
+  }
+
+  async function refreshPayout(payoutId: string) {
+    try {
+      const result = await api.refreshPayout(payoutId)
+      toast.success(`PayPal reports the batch as ${result.batch_status}`)
+      await refresh()
+    } catch (error) {
+      failed(error, "Could not refresh the payout")
     }
   }
 
@@ -273,7 +283,12 @@ export default function App() {
                 First run? Seed this client's payment history so the risk model
                 has something to read.
               </span>
-              <Button variant="outline" size="sm" className="ml-auto" onClick={seed}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-auto"
+                onClick={() => void seed(activeProject?.client_email)}
+              >
                 <DatabaseZapIcon /> Seed history
               </Button>
             </div>
@@ -328,11 +343,24 @@ export default function App() {
                               {row.batch_id ?? row.id}
                             </span>
                           </span>
-                          <span className="tabular font-heading text-[15px]">
-                            {money(row.total, row.currency)}
-                            <span className="ml-2 text-[11.5px] font-normal text-ink-faint">
+                          <span className="flex items-center gap-2">
+                            <span className="tabular font-heading text-[15px]">
+                              {money(row.total, row.currency)}
+                            </span>
+                            <span className="text-[11.5px] text-ink-faint">
                               {row.status}
                             </span>
+                            {row.batch_id ? (
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                aria-label="Ask PayPal for the batch status"
+                                title="Ask PayPal where this batch got to"
+                                onClick={() => void refreshPayout(row.id)}
+                              >
+                                <RotateCcwIcon />
+                              </Button>
+                            ) : null}
                           </span>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-2">
@@ -467,7 +495,7 @@ export default function App() {
           pay: (m) => void pay(m),
           chase: (m) => void chase(m.id),
           split: (m) => void split(m),
-          seed: () => void seed(),
+          seed: () => void seed(activeProject?.client_email),
           reset: () => void reset(),
           toggleTheme: () => setTheme(isDark ? "light" : "dark"),
           isDark,

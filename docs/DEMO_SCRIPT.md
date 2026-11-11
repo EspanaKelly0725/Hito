@@ -13,10 +13,30 @@ python scripts/check_credentials.py   # must print OK for PayPal and Claude
 uvicorn app.main:app
 ```
 
-Then in the UI: **⌘K → Reset everything**, then **⌘K → Seed this client's
-payment history**. Browser at ~1440px wide, zoom 110%, light mode. Have a
-second tab open on the PayPal sandbox inbox of the *buyer* account — showing
-the real invoice land there is the single most convincing second of the video.
+Then, in this order — it matters:
+
+1. **⌘K → Reset everything.**
+2. **Use the sample contract.**
+3. On the approval screen, set **Client — invoices go here** to your sandbox
+   **buyer** address. The contract's own address is a placeholder and PayPal
+   will deliver the invoice nowhere; the UI warns you about this in amber.
+4. **Approve this plan.**
+5. **⌘K → Seed this client's payment history.** Do it *after* approving, so the
+   history is seeded against the sandbox buyer's address — the risk model looks
+   history up by email, and against a client it has never seen it will
+   correctly report low risk and pick a friendly tone, which is not the story
+   you want to tell.
+
+Browser at ~1440px wide, zoom 110%, light mode. Have a second tab open on the
+PayPal sandbox inbox of the *buyer* account — showing the real invoice land
+there is the single most convincing second of the video.
+
+> Verified against the real sandbox on 11 Nov 2026: OAuth2, invoice-number
+> generation, invoice create, invoice send, the payer-view link, the reminder
+> call and a Payouts batch all work end to end. The only path that needs extra
+> setup is webhook signature verification, which needs a public tunnel and
+> `PAYPAL_WEBHOOK_ID`; without it the demo uses **Simulate payment**, which
+> goes through exactly the same code path as the webhook.
 
 ---
 

@@ -278,6 +278,18 @@ what works, printing no secrets. You need:
 ngrok http 8000
 ```
 
+One thing the UI will nag you about: on the approval screen, set **Client —
+invoices go here** to your sandbox **buyer** address. The sample contract's own
+address is a placeholder, and PayPal will happily accept an invoice that
+reaches nobody. Then seed the client history *after* approving, so it is
+recorded against that same address — the risk model looks history up by email.
+
+Verified against the real sandbox: OAuth2, invoice-number generation, invoice
+create, invoice send, the payer-view link, the reminder call, and a Payouts
+batch settling to `SUCCESS`. Webhook signature verification is the one path
+that needs a public tunnel and `PAYPAL_WEBHOOK_ID` to exercise; without it,
+**Simulate payment** runs the identical code path.
+
 ### Working on the frontend
 
 ```bash

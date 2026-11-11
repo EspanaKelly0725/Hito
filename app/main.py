@@ -893,6 +893,47 @@ async def approve_payout(payout_id: str, payload: PayoutApproval) -> dict:
     }
 
 
+@app.post("/api/payouts/{payout_id}/refresh")
+async def refresh_payout(payout_id: str) -> dict:
+    """Ask PayPal where the batch got to.
+
+    A real Payouts batch comes back PENDING and settles over the next minute or
+    two, item by item - unlike the mock, which is instant. Without this the
+    dashboard would show the status at the moment of sending, forever.
+    """
+    payout = db.one("SELECT * FROM payouts WHERE id = ?", (payout_id,))
+    if not payout:
+        raise HTTPException(404, "payout not found")
+    if not payout.get("batch_id"):
+        raise HTTPException(409, "This payout has not been sent yet.")
+
+    try:
+        status = await gateway().get_payout(payout["batch_id"])
+    except PayPalError as exc:
+        raise HTTPException(502, detail=exc.as_dict())
+
+    by_item = {
+        item.get("sender_item_id"): item.get("status")
+        for item in status.get("items", [])
+    }
+    for item_id, item_status in by_item.items():
+        if item_id:
+            db.update("payout_items", item_id,
+                      {"status": (item_status or "").lower() or "sent"})
+
+    db.log_event(
+        "payout.refreshed",
+        f"PayPal reports batch {payout['batch_id']} as {status['status']}",
+        actor="paypal", project_id=payout["project_id"],
+        payload={"items": by_item},
+    )
+    return {
+        "ok": True,
+        "batch_status": status["status"],
+        "items": status.get("items", []),
+    }
+
+
 @app.get("/api/payouts")
 async def list_payouts() -> list[dict]:
     payouts = db.query(
@@ -1045,21 +1086,37 @@ async def demo_contract():
                              "Run: python scripts/make_demo_pdf.py")
 
 
-@app.post("/api/demo/seed")
-async def demo_seed() -> dict:
-    """Seed the client's past behaviour, so the risk model has something to learn from.
+class SeedRequest(BaseModel):
+    client_email: str = "ap@bluebonnetroasters.example"
 
-    Creates one closed project with this same client that was paid late twice.
-    That history is what turns the second reminder from "friendly" into "firm" -
-    the risk score is computed from Hito's own ledger, not hardcoded.
+
+@app.post("/api/demo/seed")
+async def demo_seed(payload: SeedRequest | None = None) -> dict:
+    """Seed the client's past behaviour, so the risk model has something to read.
+
+    Creates one closed project for this client, paid on time twice and 14 days
+    late once. That history is what turns the reminder from "friendly" into
+    "firm" - the risk score comes from Hito's own ledger, not from a constant.
+
+    `client_email` matters: history is looked up by the client's address, so
+    when you are billing a PayPal sandbox buyer, seed the history against *that*
+    address or the model will correctly report it has never seen them before.
     """
-    db.reset()
+    payload = payload or SeedRequest()
+
+    # Replace only previously seeded history, never live work. Seeding has to be
+    # safe to run at any point in the demo, including after a project exists -
+    # wiping the database here once cost us the project we had just approved.
+    for closed in db.query("SELECT id FROM projects WHERE status = 'closed'"):
+        db.execute("DELETE FROM milestones WHERE project_id = ?", (closed["id"],))
+        db.execute("DELETE FROM projects WHERE id = ?", (closed["id"],))
+
     project_id = db.new_id("prj")
     db.insert("projects", {
         "id": project_id,
         "name": "Bluebonnet Coffee - packaging refresh (2025)",
         "client_name": "Bluebonnet Coffee Roasters",
-        "client_email": "ap@bluebonnetroasters.example",
+        "client_email": payload.client_email,
         "client_country": "US",
         "currency": "USD",
         "total_amount": 3600.0,
@@ -1093,14 +1150,14 @@ async def demo_seed() -> dict:
         })
     db.log_event(
         "demo.seeded",
-        "Seeded 3 historical invoices for Bluebonnet Coffee Roasters "
+        f"Seeded 3 historical invoices for {payload.client_email} "
         "(two on time, one 14 days late)",
         actor="system", project_id=project_id,
     )
     return {
         "ok": True,
-        "client_email": "ap@bluebonnetroasters.example",
-        "history": client_history("ap@bluebonnetroasters.example"),
+        "client_email": payload.client_email,
+        "history": client_history(payload.client_email),
     }
 
 

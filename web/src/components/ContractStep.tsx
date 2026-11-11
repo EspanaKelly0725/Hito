@@ -172,7 +172,24 @@ export function ContractStep({ onApproved }: { onApproved: () => void }) {
       </SectionTitle>
 
       <div className="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Field label="Client" value={plan.client_name} sub={plan.client_email} />
+        <div className="rounded-lg border border-rule bg-card px-3 py-2.5 shadow-card">
+          <div className="text-[10.5px] font-semibold tracking-[0.08em] text-ink-faint uppercase">
+            Client — invoices go here
+          </div>
+          <div className="mt-1 truncate font-heading text-[15px]">
+            {plan.client_name}
+          </div>
+          <Input
+            value={plan.client_email}
+            onChange={(event) =>
+              setPlan({ ...plan, client_email: event.target.value })
+            }
+            placeholder="client@example.com"
+            spellCheck={false}
+            aria-label="Client email"
+            className="mt-1 h-6 border-0 border-b border-dashed border-rule-strong bg-transparent px-0 text-[11.5px] text-ink-faint shadow-none focus-visible:ring-0"
+          />
+        </div>
         <Field
           label="Contract total"
           value={money(plan.total_amount, plan.currency)}
@@ -241,6 +258,13 @@ export function ContractStep({ onApproved }: { onApproved: () => void }) {
         <p className="max-w-lg text-[12.5px] text-ink-soft">
           Approving records the plan. From then on Hito only acts when you say a
           milestone is delivered, and every invoice still has to clear the reviewer.
+          {plan.client_email.endsWith(".example") ? (
+            <span className="mt-1 block text-amber">
+              That address is a placeholder from the contract. Running against
+              the real PayPal sandbox? Put your sandbox buyer address above, or
+              the invoice goes nowhere.
+            </span>
+          ) : null}
         </p>
         <Button size="lg" disabled={approving} onClick={approve}>
           {approving ? (

@@ -449,6 +449,16 @@ export const api = {
   whatIf: (payload: Record<string, number | boolean>) =>
     post<RiskScore>("/api/risk/score", payload),
 
-  seedDemo: () => post<{ ok: boolean; history: ClientHistory }>("/api/demo/seed"),
+  seedDemo: (clientEmail?: string) =>
+    post<{ ok: boolean; client_email: string; history: ClientHistory }>(
+      "/api/demo/seed",
+      clientEmail ? { client_email: clientEmail } : {}
+    ),
+
+  refreshPayout: (payoutId: string) =>
+    post<{ ok: boolean; batch_status: string; items: unknown[] }>(
+      `/api/payouts/${payoutId}/refresh`
+    ),
+
   resetDemo: () => post<{ ok: boolean }>("/api/demo/reset"),
 }

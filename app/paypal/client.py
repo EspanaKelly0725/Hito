@@ -278,15 +278,29 @@ def _safe_json(resp: httpx.Response) -> Any:
 def _normalize_invoice(data: dict, fallback_number: str) -> dict:
     links = {link.get("rel"): link.get("href") for link in data.get("links", [])}
     detail = data.get("detail", {})
+    metadata = detail.get("metadata", {}) or {}
     amount = data.get("amount", {})
+    invoice_id = data.get("id")
+
+    # The link a human opens is detail.metadata.recipient_view_url. The `links`
+    # array is all API endpoints - sending someone its `self` href just shows
+    # them JSON. A freshly created DRAFT has no metadata yet, so fall back to
+    # the documented payer URL shape, which is the id without its dashes.
+    payer_view = metadata.get("recipient_view_url") or links.get("payer-view")
+    if not payer_view and invoice_id:
+        host = "www.paypal.com" if settings.paypal_env == "live" \
+            else "www.sandbox.paypal.com"
+        payer_view = f"https://{host}/invoice/p/#{invoice_id.replace('-', '')[4:]}"
+
     return {
-        "id": data.get("id"),
+        "id": invoice_id,
         "number": detail.get("invoice_number") or fallback_number,
         "status": data.get("status", "DRAFT"),
         "currency": amount.get("currency_code", detail.get("currency_code", "USD")),
         "amount": float(amount.get("value") or 0) or None,
         "due_date": (detail.get("payment_term") or {}).get("due_date"),
-        "view_url": links.get("payer-view") or links.get("self"),
+        "view_url": payer_view,
+        "invoicer_url": metadata.get("invoicer_view_url"),
         "self_url": links.get("self"),
         "raw": data,
     }

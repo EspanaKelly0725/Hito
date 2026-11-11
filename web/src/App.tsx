@@ -486,8 +486,13 @@ export default function App() {
         )}
 
         <footer className="pt-2 pb-8 text-[11.5px] text-ink-faint">
-          Hito · PayPal Invoicing v2, Payouts v1 and Webhooks · agents on Claude ·
-          risk model fitted in-process. Press{" "}
+          Hito · PayPal Invoicing v2, Payouts v1 and Webhooks ·{" "}
+          {data?.modes.ai_local
+            ? `four agents on ${data.modes.ai}, open source, on this machine`
+            : data?.modes.ai_live
+              ? `four agents on ${data.modes.ai}`
+              : "four agents on the deterministic engine"}{" "}
+          · risk model fitted in-process. Press{" "}
           <kbd className="rounded border border-rule px-1 font-mono">⌘K</kbd> for
           everything.
         </footer>

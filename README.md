@@ -60,7 +60,7 @@ the risk, not of how brave Laura feels that morning.
 | ![Reading the contract](docs/screenshots/02-plan-approval.jpg) | ![The reviewer](docs/screenshots/03-reviewer.jpg) |
 | **1 · The plan, before she approves it.** Every milestone carries the sentence from the contract it came from, in an editable grid, with the warnings on top. | **2 · The reviewer.** Seven deterministic checks plus an independent Claude pass, before PayPal is ever called. |
 | ![Collecting with tact](docs/screenshots/04-dunning.jpg) | ![The approval ceiling](docs/screenshots/05-payout-ceiling.jpg) |
-| **4 · The tone is the risk.** 44.5% lands in the middle band, so the draft is firm: a date and the contract clause. The factors that moved the score are beside it. | **5 · The ceiling.** $900 is above the limit and is not sent until Laura ticks that line. $600 is not. |
+| **4 · The tone is the risk, and the draft gets checked too.** 44.5% lands in the middle band, so the draft is firm. Above it, the three things the model made up — it called a first reminder "final" and reached for form-letter filler. Caught, shown, not rewritten. | **5 · The ceiling.** $900 is above the limit and is not sent until Laura ticks that line. $600 is not. |
 
 ![The risk model](docs/screenshots/06-risk-model.jpg)
 
@@ -233,8 +233,16 @@ Implementation notes that matter:
 - **Measured, not asserted.** `scripts/eval_parser.py` scores the contract
   reader field by field against three contracts — a tidy PDF, a Spanish one
   with `US$3.000` notation and dates in words, and an English one written in
-  prose. The deterministic engine manages 17/24; see
-  [`docs/OPEN_MODEL.md`](docs/OPEN_MODEL.md) for the model's score.
+  prose. The deterministic engine manages 17/24 and collapses to 2/8 on prose;
+  the local model gets 24/24. Numbers, hardware and limitations:
+  [`docs/OPEN_MODEL.md`](docs/OPEN_MODEL.md).
+- **The model's output is checked, not trusted.** A small model will write
+  things that were never true: on the first run it told a client this was the
+  final reminder, offered a payment plan that was not on the table, and pointed
+  at an attachment that does not exist. `collector.review_draft()` checks the
+  finished text against what the model was actually given, and
+  `reviewer.verify_evidence()` drops any quoted contract clause that cannot be
+  found in the contract. Findings go to Laura; nothing is rewritten behind her.
 - **Observability**: engine, model, latency, token counts and cost are recorded
   per call in `agent_runs` and shown in the Agent log tab.
 

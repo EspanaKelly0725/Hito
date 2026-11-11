@@ -24,16 +24,31 @@ export function ContractStep({ onApproved }: { onApproved: () => void }) {
 
   async function read(file: File) {
     setReading(true)
+    const toastId = toast.loading(`Reading ${file.name}…`, {
+      description:
+        "Pulling out every deliverable, its amount, its date and the line of "
+        + "the contract that sets it. On a local model this takes about a minute.",
+      duration: Infinity,
+    })
     try {
       const result = await api.parseContract(file)
       setPlan(result)
-      const engine = result._meta?.engine === "claude" ? result._meta.model : "the rule engine"
+      const meta = result._meta
+      const engine =
+        meta?.engine === "rules" ? "the rule engine" : (meta?.model ?? "the model")
       toast.success(
         `Read ${result.milestones.length} milestones out of ${file.name}`,
-        { description: `Extracted by ${engine}. Nothing is created until you approve.` }
+        {
+          id: toastId,
+          description:
+            `Extracted by ${engine}`
+            + (meta?.latency_ms ? ` in ${(meta.latency_ms / 1000).toFixed(0)}s` : "")
+            + ". Nothing is created until you approve.",
+        }
       )
     } catch (error) {
       toast.error("Could not read that contract", {
+        id: toastId,
         description: error instanceof Error ? error.message : String(error),
       })
     } finally {

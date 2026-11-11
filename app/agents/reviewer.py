@@ -37,8 +37,12 @@ SCHEMA = {
         "confidence": {"type": "number", "description": "0 to 1"},
         "contract_evidence": {
             "type": "string",
-            "description": "Verbatim sentence from the contract that supports (or "
-                           "contradicts) this invoice amount.",
+            "description": "One complete sentence copied word for word from the "
+                           "body of the contract, the one that sets this "
+                           "deliverable or its amount. Not a heading, not a "
+                           "section title, and never one of the markers that "
+                           "delimit the contract in this message. If no single "
+                           "sentence supports the amount, return an empty string.",
         },
         "findings": {
             "type": "array",
@@ -59,6 +63,9 @@ SCHEMA = {
     "additionalProperties": False,
 }
 
+CONTRACT_OPEN = "=== contract begins on the next line ==="
+CONTRACT_CLOSE = "=== contract ends on the previous line ==="
+
 SYSTEM = """You are the invoice reviewer in an automated billing system. Another agent
 has prepared an invoice to send to a client. Your job is to stop anything the contract
 does not support.
@@ -73,8 +80,10 @@ Object when:
 Approve when the amount and the deliverable match the contract. A missing nicety
 (no PO number, a terse description) is a finding with severity "info", not an objection.
 
-Quote the contract verbatim in contract_evidence. Never restate the invoice as if it
-were the contract. You are the check, not the author."""
+contract_evidence must be a sentence copied word for word from the contract body -
+the one that sets this deliverable or its amount. Never quote the marker lines, a
+heading, or the invoice itself. If nothing in the contract supports the amount,
+return an empty string and say so in a finding. You are the check, not the author."""
 
 
 def review(*, contract_text: str, project: dict, milestone: dict,
@@ -119,7 +128,44 @@ def review(*, contract_text: str, project: dict, milestone: dict,
         effort="high",
         max_tokens=4000,
     )
+    opinion["contract_evidence"] = verify_evidence(
+        opinion.get("contract_evidence", ""), contract_text
+    )
     return decide(checks, opinion, amount=amount, currency=currency)
+
+
+def verify_evidence(evidence: str, contract_text: str) -> str:
+    """Only show a quote we can find in the contract.
+
+    The UI presents contract_evidence as "what the contract says", so it has to
+    actually say it. A small model will sometimes hand back a section heading,
+    or the marker line that delimits the contract in the prompt, or a plausible
+    paraphrase. A paraphrase is the dangerous one: it reads exactly like
+    evidence and is not. If it is not in the text, it does not get shown.
+    """
+    quote = (evidence or "").strip().strip('"“”')
+    if len(quote) < 25:
+        return ""
+    if quote.lower().startswith("===") or "contract begins" in quote.lower() \
+            or "contract ends" in quote.lower():
+        return ""
+
+    haystack = _squash(contract_text)
+    if _squash(quote) in haystack:
+        return quote
+
+    # Tolerate a trailing fragment the model trimmed, but nothing looser:
+    # a prefix that matches is still a verbatim span of the contract.
+    for cut in (len(quote), int(len(quote) * 0.8), int(len(quote) * 0.6)):
+        if cut < 25:
+            break
+        if _squash(quote[:cut]) in haystack:
+            return quote[:cut].rstrip(" ,;:") + "..."
+    return ""
+
+
+def _squash(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "")).strip().lower()
 
 
 def decide(checks: list[dict], opinion: dict, *, amount: float,

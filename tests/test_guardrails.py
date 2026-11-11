@@ -157,3 +157,49 @@ def test_items_above_the_ceiling_are_flagged_for_approval():
     flagged = {i["name"]: i["needs_approval"] for i in items}
     assert flagged["Andres Villa"] is (900.0 > settings.payout_threshold)
     assert flagged["Mariana Soto"] is (600.0 > settings.payout_threshold)
+
+
+# --- the quoted contract clause has to be real -----------------------------
+
+CONTRACT_WITH_CLAUSE = (
+    "2. DELIVERABLES AND FEES\n"
+    "Milestone 1 - Logo and primary marks: US$3,000, due on October 10, 2026.\n"
+    "Each invoice is issued through PayPal upon delivery of the corresponding\n"
+    "milestone and is payable within fifteen (15) days of issue.\n"
+)
+
+
+def test_a_real_quote_is_kept():
+    quote = "Milestone 1 - Logo and primary marks: US$3,000, due on October 10, 2026."
+    assert reviewer.verify_evidence(quote, CONTRACT_WITH_CLAUSE) == quote
+
+
+def test_a_quote_that_wraps_in_the_source_is_still_found():
+    # the contract wraps this across two lines; the model returns it as one
+    quote = ("Each invoice is issued through PayPal upon delivery of the "
+             "corresponding milestone and is payable within fifteen (15) days of issue.")
+    assert reviewer.verify_evidence(quote, CONTRACT_WITH_CLAUSE) == quote
+
+
+def test_a_paraphrase_is_dropped():
+    """The dangerous case: it reads exactly like evidence and is not."""
+    paraphrase = "The contract states that each milestone is worth three thousand dollars."
+    assert reviewer.verify_evidence(paraphrase, CONTRACT_WITH_CLAUSE) == ""
+
+
+def test_the_prompt_markers_are_never_quoted():
+    # qwen2.5:3b returned exactly this on the first run
+    assert reviewer.verify_evidence("CONTRACT TEXT", CONTRACT_WITH_CLAUSE) == ""
+    assert reviewer.verify_evidence(
+        "=== contract begins on the next line ===", CONTRACT_WITH_CLAUSE) == ""
+
+
+def test_a_scrap_is_not_evidence():
+    assert reviewer.verify_evidence("US$3,000", CONTRACT_WITH_CLAUSE) == ""
+    assert reviewer.verify_evidence("", CONTRACT_WITH_CLAUSE) == ""
+
+
+def test_curly_quotes_around_a_real_clause_are_stripped():
+    quote = "Milestone 1 - Logo and primary marks: US$3,000, due on October 10, 2026."
+    assert reviewer.verify_evidence(f"\u201c{quote}\u201d",
+                                    CONTRACT_WITH_CLAUSE) == quote

@@ -28,8 +28,10 @@ SCHEMA = {
         "subject": {"type": "string", "description": "Email subject, under 80 chars."},
         "body": {
             "type": "string",
-            "description": "The message. Plain text, no markdown, no placeholders "
-                           "like [name] - use the real names given.",
+            "description": "The message, as plain text. Separate paragraphs with "
+                           "a blank line - never one solid block of text. No "
+                           "markdown, no placeholders like [name]: use the real "
+                           "names given.",
         },
         "tone_used": {"type": "string"},
         "rationale": {
@@ -67,7 +69,13 @@ Hard rules:
 - Never invent amounts, dates or facts. Use only what you are given.
 - Never mention risk scores, probabilities, models or automation. The client must read
   a message from Laura, not from a system.
-- No markdown, no bullet characters, no placeholders. Sign as the designer's name."""
+- No markdown, no bullet characters, no placeholders. Sign as the designer's name.
+- Break the message into short paragraphs separated by a blank line. A single
+  solid block of text reads like a form letter.
+- Never open with filler. No "I hope this message finds you well", no "I trust you
+  are doing well", no "I am writing to inform you". Start with the point.
+- Never say "please do not hesitate to contact me" or "thank you for your prompt
+  attention to this matter". Write the way a person writes to someone she knows."""
 
 
 def draft(*, project: dict, milestone: dict, risk: dict, days_overdue: int,

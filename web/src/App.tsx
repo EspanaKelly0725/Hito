@@ -64,10 +64,24 @@ export default function App() {
       description: error instanceof Error ? error.message : String(error),
     })
 
+  /**
+   * On a local open-source model an agent takes the better part of a minute.
+   * A disabled button is not enough feedback for that, so every long call says
+   * what it is doing and on what, and the result replaces the same toast.
+   */
+  const working = (message: string) =>
+    toast.loading(message, {
+      description: data?.modes.ai_local
+        ? `Running ${data.modes.ai} on this machine — about a minute.`
+        : undefined,
+      duration: Infinity,
+    })
+
   /* ---- actions -------------------------------------------------------- */
 
   async function deliver(milestone: Milestone, override = false) {
     setBusyId(milestone.id)
+    const toastId = working("The reviewer is checking this against the contract…")
     try {
       const result = await api.deliver(
         milestone.id,
@@ -78,19 +92,23 @@ export default function App() {
       setReviewMilestone(milestone)
       if (result.stage === "invoiced" && result.invoice) {
         toast.success(`Invoice ${result.invoice.number} sent`, {
+          id: toastId,
           description: `${money(result.invoice.amount)} to the client through PayPal (${result.invoice.gateway}).`,
         })
       } else if (result.stage === "hold") {
         toast.warning("The reviewer held this invoice", {
+          id: toastId,
           description: result.review.headline,
         })
       } else {
         toast.error("The reviewer blocked this invoice", {
+          id: toastId,
           description: result.review.headline,
         })
       }
       await refresh()
     } catch (error) {
+      toast.dismiss(toastId)
       failed(error, "Could not invoice this milestone")
     } finally {
       setBusyId(null)
@@ -114,10 +132,16 @@ export default function App() {
 
   async function chase(milestoneId: string) {
     setBusyId(milestoneId)
+    const toastId = working("Scoring the risk and writing the reminder…")
     try {
       const draft = await api.draftDunning(milestoneId)
       setDunning(draft)
+      toast.success(`Drafted a ${draft.risk.tone.replace("_", " ")} reminder`, {
+        id: toastId,
+        description: `The risk model put this at ${Math.round(draft.risk.pd * 100)}% — ${draft.risk.band} risk.`,
+      })
     } catch (error) {
+      toast.dismiss(toastId)
       failed(error, "Could not draft the reminder")
     } finally {
       setBusyId(null)
@@ -141,9 +165,18 @@ export default function App() {
 
   async function split(milestone: Milestone) {
     setBusyId(milestone.id)
+    const toastId = working("Working out everyone's share…")
     try {
-      setPayout(await api.proposePayout(milestone.id))
+      const proposal = await api.proposePayout(milestone.id)
+      setPayout(proposal)
+      toast.success(`Split into ${proposal.items.length} payouts`, {
+        id: toastId,
+        description: proposal.needs_approval
+          ? "One item is above your ceiling and needs your tick."
+          : "All under your approval ceiling.",
+      })
     } catch (error) {
+      toast.dismiss(toastId)
       failed(error, "Could not propose the split")
     } finally {
       setBusyId(null)

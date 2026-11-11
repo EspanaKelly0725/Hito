@@ -7,11 +7,13 @@
 #
 # Two honest notes about what the hosted version is and is not:
 #
-# * The AI engine here is the deterministic rule engine. Hito's real engine is
-#   an open-source model (qwen2.5:3b) running locally, and a ~2 GB model does
-#   not fit a free Render instance. To see the model, run it locally - see
-#   docs/OPEN_MODEL.md. Setting ANTHROPIC_API_KEY below is the other way to
-#   give the hosted demo a real model.
+# * The AI engine. Locally Hito runs qwen2.5:3b on your own machine, and a
+#   ~2 GB model does not fit a free Render instance. So the hosted demo runs
+#   the SAME open-weights family through an OpenAI-compatible endpoint: set
+#   HITO_REMOTE_BASE_URL and HITO_REMOTE_API_KEY in the dashboard and a judge
+#   who only clicks the link still sees a model working. Leave them unset and
+#   it falls back to the deterministic engine, labelled as such.
+#   See docs/OPEN_MODEL.md.
 # * The free plan has no persistent disk, so SQLite lives in the container and
 #   resets on every deploy and every cold start. That is fine for a demo and
 #   wrong for anything else; the `disk` block below is commented out and is
@@ -33,10 +35,20 @@ services:
         value: sandbox
       - key: PAYOUT_APPROVAL_THRESHOLD_USD
         value: "800"
-      # No Ollama on a free instance, so do not let the app sit there probing
-      # for a local model server that will never answer.
+      # No Ollama on a free instance, so do not sit there probing for a local
+      # model server that will never answer. "auto" still finds the hosted
+      # model below when it is configured, and the rule engine when it is not.
       - key: HITO_LLM_PROVIDER
-        value: rules
+        value: auto
+      # Qwen3 32B: Apache-2.0 open weights, structured outputs, and about
+      # $0.0003 per full demo run. Any OpenAI-compatible endpoint works.
+      - key: HITO_REMOTE_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: HITO_REMOTE_MODEL
+        value: qwen/qwen3-32b
+      # Set this in the dashboard. Without it, the deterministic engine runs.
+      - key: HITO_REMOTE_API_KEY
+        sync: false
       # Set these in the Render dashboard to point the hosted demo at your real
       # PayPal sandbox. Left unset, it runs the in-process gateway and says so.
       - key: PAYPAL_CLIENT_ID
@@ -47,9 +59,7 @@ services:
         sync: false
       - key: PAYPAL_WEBHOOK_ID
         sync: false
-      # Optional: give the hosted demo a real model. Costs pennies per demo.
-      # Setting this also means removing HITO_LLM_PROVIDER above, or setting it
-      # to "claude".
+      # Optional: Claude instead, if you would rather.
       - key: ANTHROPIC_API_KEY
         sync: false
 

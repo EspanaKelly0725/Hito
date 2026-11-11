@@ -138,7 +138,82 @@ def _ollama_chat(*, system: str, user: str, schema: dict | None,
 
 
 # ---------------------------------------------------------------------------
-# backend 2: Claude
+# backend 2: the same open model, hosted
+# ---------------------------------------------------------------------------
+
+def remote_configured() -> bool:
+    return bool(settings.remote_base_url and settings.remote_api_key)
+
+
+def _remote_chat(*, system: str, user: str, schema: dict | None,
+                 max_tokens: int) -> tuple[str, dict]:
+    """Call any OpenAI-compatible chat endpoint.
+
+    Exists because the hosted demo cannot run Ollama - a 2 GB model does not
+    fit a free instance - and a judge who only clicks the link should still see
+    a model working. It is the same open-weights family, on someone else's GPU.
+    """
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ]
+    payload: dict[str, Any] = {
+        "model": settings.remote_model,
+        "messages": messages,
+        "temperature": 0,
+        "max_tokens": max_tokens,
+    }
+    if schema is not None:
+        payload["response_format"] = {
+            "type": "json_schema",
+            "json_schema": {"name": "hito_output", "strict": True,
+                            "schema": schema},
+        }
+
+    def post(body: dict) -> httpx.Response:
+        return httpx.post(
+            f"{settings.remote_base_url}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {settings.remote_api_key}",
+                "Content-Type": "application/json",
+            },
+            json=body,
+            timeout=settings.remote_timeout,
+        )
+
+    response = post(payload)
+    if response.status_code == 400 and schema is not None:
+        # Not every model behind an OpenAI-compatible endpoint supports a full
+        # JSON schema. Degrade to plain JSON mode and put the shape in the
+        # prompt; _loads() is already tolerant of what that returns.
+        relaxed = dict(payload, response_format={"type": "json_object"})
+        relaxed["messages"] = [
+            messages[0],
+            {"role": "user",
+             "content": f"{user}\n\nReply with JSON matching this schema "
+                        f"exactly:\n{json.dumps(schema)}"},
+        ]
+        response = post(relaxed)
+
+    response.raise_for_status()
+    body = response.json()
+    if "error" in body and not body.get("choices"):
+        raise RuntimeError(str(body["error"])[:200])
+    choices = body.get("choices") or []
+    if not choices:
+        raise RuntimeError("remote model returned no choices")
+    text = (choices[0].get("message") or {}).get("content") or ""
+    usage = body.get("usage") or {}
+    if not text.strip():
+        raise RuntimeError("remote model returned an empty response")
+    return text, {
+        "input_tokens": int(usage.get("prompt_tokens") or 0),
+        "output_tokens": int(usage.get("completion_tokens") or 0),
+    }
+
+
+# ---------------------------------------------------------------------------
+# backend 3: Claude
 # ---------------------------------------------------------------------------
 
 def claude_client():
@@ -208,15 +283,15 @@ def _claude_chat(cli, *, system: str, user: str, schema: dict | None,
 def chain() -> list[str]:
     """Which backends to try, in order, for the configured provider."""
     choice = settings.llm_provider
-    if choice == "ollama":
-        return ["ollama"]
-    if choice == "claude":
-        return ["claude"]
+    if choice in ("ollama", "remote", "claude"):
+        return [choice]
     if choice == "rules":
         return []
     order = []
     if ollama_status()["ok"]:
-        order.append("ollama")
+        order.append("ollama")          # local and private, always preferred
+    if remote_configured():
+        order.append("remote")          # same open weights, someone else's GPU
     if settings.anthropic_api_key:
         order.append("claude")
     return order
@@ -243,6 +318,16 @@ def status() -> dict:
             "label": f"{settings.ollama_model} (local, open source)",
             "detail": local["detail"],
             "cost": "free - runs on this machine",
+            "fallbacks": order[1:] + ["rules"],
+        }
+    if active == "remote":
+        return {
+            "live": True,
+            "provider": "remote",
+            "model": settings.remote_model,
+            "label": f"{settings.remote_model} (open weights, hosted)",
+            "detail": f"served by {settings.remote_base_url}",
+            "cost": "metered, fractions of a cent per run",
             "fallbacks": order[1:] + ["rules"],
         }
     if active == "claude":
@@ -339,6 +424,16 @@ def call_json(agent: str, *, system: str, user: str, schema: dict,
                                       started, tokens=tokens)
                 return data
 
+            if backend == "remote":
+                text, tokens = _remote_chat(
+                    system=system, user=user, schema=schema,
+                    max_tokens=min(max_tokens, 4096),
+                )
+                data = _loads(text)
+                data["_meta"] = _meta(agent, "remote", settings.remote_model,
+                                      started, tokens=tokens)
+                return data
+
             cli = claude_client()
             if cli is None:
                 notes.append(_claude_error or "claude unavailable")
@@ -376,6 +471,15 @@ def call_text(agent: str, *, system: str, user: str,
                 return {"text": text.strip(),
                         "_meta": _meta(agent, "ollama", settings.ollama_model,
                                        started, tokens=tokens)}
+
+            if backend == "remote":
+                text, tokens = _remote_chat(
+                    system=system, user=user, schema=None,
+                    max_tokens=min(max_tokens, 2048),
+                )
+                return {"text": text.strip(),
+                        "_meta": _meta(agent, "remote", settings.remote_model,
+                                       started, tokens=tokens)}
             cli = claude_client()
             if cli is None:
                 notes.append(_claude_error or "claude unavailable")
@@ -406,7 +510,10 @@ def context_budget_chars(reserve_tokens: int = 1800) -> int:
 
     ~3.5 characters per token is close enough for English and Spanish prose.
     """
-    if chain()[:1] == ["ollama"]:
+    active = chain()[:1]
+    if active == ["remote"]:
+        return 50000
+    if active == ["ollama"]:
         usable = max(settings.ollama_ctx - reserve_tokens, 1024)
         return int(usable * 3.5)
     return 50000

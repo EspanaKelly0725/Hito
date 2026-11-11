@@ -55,6 +55,15 @@ class Settings:
     ollama_ctx: int = int(os.getenv("HITO_OLLAMA_CTX", "8192") or 8192)
     ollama_timeout: float = float(os.getenv("HITO_OLLAMA_TIMEOUT", "180") or 180)
 
+    # The same open-weights model, served by someone else's GPU. This is what
+    # the hosted demo runs: a 2 GB model does not fit a free instance, but the
+    # product should still show a model working rather than a rule engine.
+    # Any OpenAI-compatible endpoint works (OpenRouter, Groq, Together, vLLM).
+    remote_base_url: str = os.getenv("HITO_REMOTE_BASE_URL", "").strip().rstrip("/")
+    remote_api_key: str = os.getenv("HITO_REMOTE_API_KEY", "").strip()
+    remote_model: str = os.getenv("HITO_REMOTE_MODEL", "qwen/qwen3-32b").strip()
+    remote_timeout: float = float(os.getenv("HITO_REMOTE_TIMEOUT", "120") or 120)
+
     # Claude, optional.
     anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "").strip()
     model: str = os.getenv("HITO_MODEL", "claude-opus-5-5").strip()

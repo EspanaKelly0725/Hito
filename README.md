@@ -10,9 +10,9 @@ Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/).
 **Live demo: <https://hito-zz3z.onrender.com>** — press *Use the sample
 contract* and walk the five steps. It runs on Render's free tier, so the first
 load can take ~50 s while the instance wakes up; everything after that is
-instant. (The hosted copy runs the in-process PayPal gateway and the
-deterministic engine, both labelled in the header — see *Deploying* below for
-why.)
+instant. (The hosted copy runs the in-process PayPal gateway, and the same open-weights
+model family served over an API because a free instance has no GPU — both
+labelled in the header.)
 
 Or run it yourself, which is the version with the real engine:
 
@@ -364,12 +364,15 @@ the environment variables in the Render dashboard to point it at your real
 sandbox. There is also a `Dockerfile` for anywhere else. The frontend is
 pre-built and committed, so neither needs Node.
 
-Worth saying plainly: **the hosted demo runs the rule engine, not the model.**
-A ~2 GB open-source model does not fit a free Render instance, and Hito's whole
-argument for that model is that it runs on the freelancer's own machine. The
-hosted URL is the no-install path; `ollama pull qwen2.5:3b` locally is the
-real one. (Setting `ANTHROPIC_API_KEY` in the Render dashboard is the other way
-to give the hosted demo a real model.)
+A ~2 GB model does not fit a free Render instance, so the hosted demo runs the
+**same open-weights family through an OpenAI-compatible endpoint** — set
+`HITO_REMOTE_BASE_URL` and `HITO_REMOTE_API_KEY` in the dashboard and a visitor
+who only clicks the link still sees a model working. Unset, it falls back to
+the deterministic engine and says so.
+
+The honest trade: on that tier the contract leaves the machine. Running Hito
+locally is the version where it does not, which is why local is first in the
+chain and the default everywhere else.
 
 ---
 

@@ -199,3 +199,59 @@ def test_currency_never_returns_a_broken_code():
     for written in ("US dollars", "united states dollars", "a pile of money"):
         code = _clean_currency(written)
         assert len(code) == 3 and code.isalpha() and code.isupper()
+
+
+# --- the hosted open-weights backend ---------------------------------------
+
+@pytest.fixture
+def remote_configured():
+    """Point the hosted backend at a dead endpoint and put it back after."""
+    base, key = settings.remote_base_url, settings.remote_api_key
+    settings.remote_base_url = "http://127.0.0.1:1/v1"
+    settings.remote_api_key = "test-key-not-real"
+    yield
+    settings.remote_base_url, settings.remote_api_key = base, key
+
+
+def test_remote_is_only_offered_when_it_is_configured(provider, no_local_model):
+    provider("auto")
+    assert "remote" not in llm.chain(), "no endpoint configured in the suite"
+
+
+def test_auto_prefers_the_local_model_over_the_hosted_one(provider,
+                                                          remote_configured):
+    """Local first is the privacy promise, not an accident of ordering."""
+    provider("auto")
+    order = llm.chain()
+    assert "remote" in order
+    if "ollama" in order:
+        assert order.index("ollama") < order.index("remote")
+
+
+def test_remote_can_be_pinned(provider, remote_configured):
+    provider("remote")
+    assert llm.chain() == ["remote"]
+    status = llm.status()
+    assert status["provider"] == "remote"
+    assert status["model"] == settings.remote_model
+    assert status["live"] is True
+
+
+def test_an_unreachable_hosted_model_falls_through_to_rules(provider,
+                                                            remote_configured):
+    provider("remote")
+    result = llm.call_json(
+        "test_agent", system="x", user="y", schema=SCHEMA,
+        fallback=lambda: {"answer": "rule engine"},
+    )
+    assert result["answer"] == "rule engine"
+    assert result["_meta"]["engine"] == "rules"
+    assert "remote" in result["_meta"]["note"]
+
+
+def test_the_hosted_model_gets_a_bigger_context_budget(provider,
+                                                       remote_configured):
+    provider("remote")
+    assert llm.context_budget_chars() == 50000
+    provider("ollama")
+    assert llm.context_budget_chars() < 50000

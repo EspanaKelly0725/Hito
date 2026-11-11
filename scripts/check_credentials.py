@@ -107,6 +107,48 @@ def check_local_model() -> bool:
     return result.get("milestones_found") == 2
 
 
+def check_remote_model() -> bool:
+    """The engine a deployment without a GPU uses: same open weights, hosted."""
+    if not llm.remote_configured():
+        line(SKIP, "Hosted open-weights model (optional)",
+             "HITO_REMOTE_BASE_URL / HITO_REMOTE_API_KEY are empty. Only needed "
+             "where there is no GPU to run the local model - the Render demo "
+             "uses this so a visitor still sees a model working.")
+        return True
+
+    original = settings.llm_provider
+    settings.llm_provider = "remote"
+    result = llm.call_json(
+        "credential_check",
+        system="You extract payment plans from contracts. Answer only from the text.",
+        user="Contract: two deliverables, US$1,500 each, payable in US dollars. "
+             "How many milestones and which currency?",
+        schema={
+            "type": "object",
+            "properties": {
+                "milestones_found": {"type": "integer"},
+                "currency": {"type": "string"},
+            },
+            "required": ["milestones_found", "currency"],
+            "additionalProperties": False,
+        },
+        fallback=lambda: {"milestones_found": -1, "currency": "?"},
+        max_tokens=256,
+    )
+    settings.llm_provider = original
+    meta = result.get("_meta", {})
+    if meta.get("engine") != "remote":
+        line(BAD, "Hosted open-weights model",
+             meta.get("note", "the call did not reach the endpoint"))
+        return False
+    line(OK, f"Hosted open-weights model ({meta.get('model')})",
+         f"structured output returned milestones_found="
+         f"{result.get('milestones_found')} in {meta.get('latency_ms')} ms "
+         f"({meta.get('input_tokens')} in / {meta.get('output_tokens')} out) "
+         f"via {settings.remote_base_url}")
+    return result.get("milestones_found") == 2
+
+
 def check_claude() -> bool:
     if not settings.anthropic_api_key:
         line(SKIP, "Claude API key (optional)",
@@ -168,6 +210,7 @@ def main() -> int:
     results = [
         asyncio.run(check_paypal()),
         check_local_model(),
+        check_remote_model(),
         check_claude(),
         check_risk(),
     ]

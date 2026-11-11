@@ -201,7 +201,9 @@ export function EngineBadge({
   note?: string
 }) {
   const local = engine === "ollama"
+  const remote = engine === "remote"
   const claude = engine === "claude"
+  const isModel = local || remote || claude
   return (
     <Tooltip>
       <TooltipTrigger
@@ -210,17 +212,19 @@ export function EngineBadge({
             variant="outline"
             className={cn(
               "gap-1 rounded-sm border-rule font-mono text-[10.5px]",
-              local && "text-teal"
+              (local || remote) && "text-teal"
             )}
           >
-            {local ? <CpuIcon /> : claude ? <CloudIcon /> : <ServerCogIcon />}
-            {local || claude ? (model ?? engine) : "rule engine"}
+            {local ? <CpuIcon /> : isModel ? <CloudIcon /> : <ServerCogIcon />}
+            {isModel ? (model ?? engine) : "rule engine"}
           </Badge>
         }
       />
       <TooltipContent>
         {local
           ? `Written by ${model}, an open-source model running on this machine. No API key, no network call, no cost — the contract never leaves the laptop. Tokens and latency are in the Agent log.`
+          : remote
+            ? `Written by ${model}, the same open-weights model family, served over an API because this deployment has no GPU of its own. Run Hito locally and it uses your machine instead.`
           : claude
             ? `Written by ${model}. Token counts and cost are in the Agent log.`
             : `Deterministic fallback: ${note ?? "no model engine available"}.`}
@@ -298,13 +302,19 @@ export function ModeBadges({ modes }: { modes: Modes }) {
             >
               {modes.ai_local ? <CpuIcon /> : null}
               AI: {modes.ai_live ? modes.ai : "rule engine"}
-              {modes.ai_local ? " · local" : ""}
+              {modes.ai_local
+                ? " · local"
+                : modes.ai_provider === "remote"
+                  ? " · open weights"
+                  : ""}
             </Badge>
           }
         />
         <TooltipContent>
           {modes.ai_local
             ? `All four agents run on ${modes.ai}, an open-source model on this machine, constrained by a JSON schema. No API key, no cost, and the contract never leaves the laptop.`
+            : modes.ai_provider === "remote"
+              ? `All four agents run on ${modes.ai}, open weights served over an API because this deployment has no GPU. Locally, Hito runs the same family on your own machine and nothing leaves it.`
             : modes.ai_live
               ? `All four agents call ${modes.ai} with structured outputs.`
               : `Every agent is using its deterministic fallback, so the flow works but the writing is templated. ${modes.ai_detail} To turn the real engine on: install Ollama, then run "ollama pull qwen2.5:3b".`}

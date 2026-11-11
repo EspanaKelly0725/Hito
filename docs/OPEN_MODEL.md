@@ -51,14 +51,42 @@ which engine answered.
 The engine is chosen once, in `app/agents/llm.py`, and falls through:
 
 ```
-local open-source model  (Ollama, if a model is pulled)
+local open-source model     (Ollama, if a model is pulled)
         ↓ unavailable, or the call fails
-Claude                   (only if ANTHROPIC_API_KEY is set)
+same open weights, hosted   (any OpenAI-compatible endpoint, if configured)
         ↓ unavailable, or the call fails
-deterministic rule engine  (always there)
+Claude                      (only if ANTHROPIC_API_KEY is set)
+        ↓ unavailable, or the call fails
+deterministic rule engine   (always there)
 ```
 
-Pin it with `HITO_LLM_PROVIDER=ollama | claude | rules`. Whatever actually ran
+Local is first on purpose: it is the privacy promise, not an accident of
+ordering. There is a test that asserts it.
+
+Pin one with `HITO_LLM_PROVIDER=ollama | remote | claude | rules`.
+
+### Why there is a hosted tier at all
+
+A 2 GB model does not fit a free hosting instance, and the demo at
+<https://hito-zz3z.onrender.com> would otherwise show a rule engine to anyone
+who only clicks the link. So that deployment runs the **same open-weights
+family** through an OpenAI-compatible endpoint — Qwen3 32B, Apache-2.0,
+structured outputs, roughly $0.0003 for a full pass through the demo:
+
+```bash
+HITO_REMOTE_BASE_URL=https://openrouter.ai/api/v1
+HITO_REMOTE_API_KEY=sk-or-...
+HITO_REMOTE_MODEL=qwen/qwen3-32b
+```
+
+Any OpenAI-compatible endpoint works — OpenRouter, Groq, Together, your own
+vLLM. If the endpoint rejects a full JSON schema, the backend degrades to plain
+JSON mode with the schema in the prompt rather than failing.
+
+Be clear about what this tier gives up: the contract leaves the machine. That
+is the price of a demo anyone can click, and it is exactly why the local tier
+is the default and goes first. Run Hito on your own laptop and nothing is
+transmitted at all. Whatever actually ran
 is recorded per call in `agent_runs` and shown in the UI — the header says
 `AI: qwen2.5:3b · local`, and the rule engine is never dressed up as a model.
 

@@ -357,7 +357,7 @@ def _normalize(data: dict, contract_text: str) -> dict:
         "client_email": (data.get("client_email") or "").strip(),
         "client_country": (data.get("client_country") or "").upper()[:2],
         "client_language": "es" if (data.get("client_language") or "en").lower().startswith("es") else "en",
-        "currency": (data.get("currency") or "USD").upper()[:3],
+        "currency": _clean_currency(data.get("currency")),
         "total_amount": total or milestone_sum,
         "payment_terms": (data.get("payment_terms") or "")[:400],
         "milestones": milestones,
@@ -367,6 +367,35 @@ def _normalize(data: dict, contract_text: str) -> dict:
         "contract_chars": len(contract_text),
         "_meta": meta,
     }
+
+
+CURRENCY_WORDS = {
+    "us dollar": "USD", "us dollars": "USD", "dollar": "USD", "dollars": "USD",
+    "usd": "USD", "u.s. dollars": "USD", "united states dollars": "USD",
+    "dolar": "USD", "dolares": "USD", "dólar": "USD", "dólares": "USD",
+    "euro": "EUR", "euros": "EUR", "eur": "EUR",
+    "pound": "GBP", "pounds": "GBP", "gbp": "GBP",
+    "peso": "COP", "pesos": "COP", "cop": "COP",
+    "mxn": "MXN", "cad": "CAD", "brl": "BRL", "ars": "ARS",
+}
+
+
+def _clean_currency(raw: object) -> str:
+    """Models write "US dollars" as happily as "USD"; the rest of the app needs
+    an ISO code, and naively upper-casing the first three characters turns
+    "US dollars" into "US ", which PayPal rejects."""
+    text = str(raw or "").strip()
+    if not text:
+        return "USD"
+    mapped = CURRENCY_WORDS.get(text.lower())
+    if mapped:
+        return mapped
+    if len(text) == 3 and text.isalpha():
+        return text.upper()
+    for word, code in CURRENCY_WORDS.items():
+        if word in text.lower():
+            return code
+    return "USD"
 
 
 def _clean_date(raw: object, idx: int) -> str:

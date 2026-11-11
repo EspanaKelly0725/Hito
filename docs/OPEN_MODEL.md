@@ -106,16 +106,52 @@ python scripts/eval_parser.py --provider ollama --runs 3
 
 | Engine | Sample PDF | Spanish | Prose | Overall |
 | --- | --- | --- | --- | --- |
-| Deterministic rule engine | 8/8 | 7/8 | 2/8 | **17/24 (71%)** |
-| Qwen2.5 3B (local) | _see below_ | | | |
+| Deterministic rule engine | 8/8 | 7/8 | **2/8** | 17/24 (71%) |
+| **Qwen2.5 3B (local)** | 8/8 | 8/8 | **8/8** | **24/24 (100%)** |
+
+Measured on 11 Nov 2026, on the reference machine: Intel Core Ultra 5 125U,
+16 GB RAM, integrated graphics, Ollama 0.40.16, `qwen2.5:3b` at Q4_K_M.
 
 The rule engine's 8/8 on the sample is flattering and worth being honest
 about: those regexes were written against that contract. Its real behaviour is
 the other two columns — it survives a different notation and language, and it
-collapses on prose, because there is no list to find. That is the gap a model
-is for.
+collapses on prose, because there is no list to find and the amounts live in
+sentences. **That column is the entire argument for having a model**, and it is
+where 2/8 became 8/8.
 
-<!-- MEASURED -->
+The Spanish contract is the quieter result. The rule engine missed only the
+dates, because the fee schedule wrapped mid-sentence —
+`"US$3.000, con fecha 18 de\noctubre de 2026"` — and a line-oriented regex
+cannot see across the break. A model reads the sentence.
+
+### What it costs in time
+
+| | Sample PDF | Spanish | Prose |
+| --- | --- | --- | --- |
+| Wall clock | 74.1 s | 55.5 s | 31.6 s |
+| Output tokens | 642 | 589 | 353 |
+
+Roughly a minute to read a contract, on a CPU, scaling with how much JSON it
+has to write. That is the honest trade for this hardware: the rule engine is
+instant and wrong on prose; the model is right and takes a minute. Reading a
+contract happens once per project and the UI shows it working, so a minute is
+affordable in a way it would not be on a per-keystroke path.
+
+If a minute is too long for your machine or your demo:
+
+- `HITO_OLLAMA_MODEL=qwen2.5:1.5b` roughly halves it, with a real accuracy cost
+  on prose — re-run the benchmark before trusting it.
+- Any GPU changes the picture entirely; this measurement is a laptop CPU floor,
+  not a ceiling.
+- `HITO_LLM_PROVIDER=claude` with a key is the fast path, at the cost of
+  sending the contract to a third party.
+
+Reproduce all of it:
+
+```bash
+python scripts/eval_parser.py --provider rules
+python scripts/eval_parser.py --provider ollama
+```
 
 ## Limitations, stated plainly
 

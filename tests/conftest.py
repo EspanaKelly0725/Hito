@@ -12,6 +12,14 @@ sys.path.insert(0, str(ROOT))
 # Must be set before app.config is imported.
 os.environ["HITO_FORCE_MOCK"] = "1"
 os.environ.pop("ANTHROPIC_API_KEY", None)
+
+# Pin the deterministic engine. The suite asserts on fallback behaviour and has
+# to be fast and repeatable, so it must not quietly start calling a local model
+# just because the developer happens to have one running - that turned a
+# two-second suite into a twenty-minute one the first time Ollama was installed.
+# The model backends are exercised by scripts/eval_parser.py, which measures
+# them, and by tests that set the provider themselves.
+os.environ["HITO_LLM_PROVIDER"] = "rules"
 os.environ.setdefault(
     "HITO_DB", str(Path(tempfile.gettempdir()) / "hito_test.db")
 )

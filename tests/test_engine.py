@@ -31,6 +31,22 @@ def provider():
     settings.llm_provider = original
 
 
+@pytest.fixture
+def no_local_model():
+    """Point the local backend at a dead port.
+
+    Tests about what happens when a backend is down must not depend on whether
+    the developer happens to have Ollama running - this failed the first time
+    the model was actually installed.
+    """
+    original = settings.ollama_host
+    settings.ollama_host = "http://127.0.0.1:1"
+    llm.ollama_status(force=True)
+    yield
+    settings.ollama_host = original
+    llm.ollama_status(force=True)
+
+
 def test_rules_provider_skips_every_model(provider):
     provider("rules")
     assert llm.chain() == []
@@ -47,15 +63,19 @@ def test_pinning_a_provider_uses_only_that_one(provider):
     assert llm.chain() == ["claude"]
 
 
-def test_auto_falls_back_to_rules_when_nothing_is_configured(provider):
+def test_auto_falls_back_to_rules_when_nothing_is_configured(
+    provider, no_local_model
+):
     provider("auto")
-    # the test environment has no API key and, usually, no local model
-    if not llm.ollama_status()["ok"] and not settings.anthropic_api_key:
-        assert llm.chain() == []
+    assert not settings.anthropic_api_key, "the suite runs without a key"
+    assert llm.chain() == []
+    assert llm.status()["provider"] == "rules"
 
 
-def test_a_failed_backend_falls_through_to_the_deterministic_twin(provider):
-    provider("ollama")  # pinned, and the test host has no model server
+def test_a_failed_backend_falls_through_to_the_deterministic_twin(
+    provider, no_local_model
+):
+    provider("ollama")  # pinned, and the backend is unreachable
     result = llm.call_json(
         "test_agent",
         system="irrelevant",
@@ -71,7 +91,7 @@ def test_a_failed_backend_falls_through_to_the_deterministic_twin(provider):
     assert meta["note"], "it has to say why the model did not run"
 
 
-def test_text_calls_fall_back_the_same_way(provider):
+def test_text_calls_fall_back_the_same_way(provider, no_local_model):
     provider("ollama")
     result = llm.call_text(
         "test_agent", system="x", user="y", fallback=lambda: "templated copy"
@@ -149,3 +169,33 @@ def test_the_budget_follows_the_active_engine(provider):
     provider("ollama")
     local = llm.context_budget_chars()
     assert 1000 < local < 50000, "a local 8K window is much smaller than Claude's"
+
+
+# --- normalising what a model writes for a currency ------------------------
+
+@pytest.mark.parametrize("written,expected", [
+    ("USD", "USD"),
+    ("usd", "USD"),
+    ("US dollars", "USD"),          # what qwen2.5:3b actually returned once
+    ("U.S. dollars", "USD"),
+    ("dolares", "USD"),
+    ("EUR", "EUR"),
+    ("euros", "EUR"),
+    ("COP", "COP"),
+    ("", "USD"),
+    (None, "USD"),
+])
+def test_currency_is_normalised_to_an_iso_code(written, expected):
+    from app.agents.contract_parser import _clean_currency
+
+    assert _clean_currency(written) == expected
+
+
+def test_currency_never_returns_a_broken_code():
+    """Upper-casing the first three characters of "US dollars" gives "US ",
+    which PayPal rejects. Nothing should ever produce that."""
+    from app.agents.contract_parser import _clean_currency
+
+    for written in ("US dollars", "united states dollars", "a pile of money"):
+        code = _clean_currency(written)
+        assert len(code) == 3 and code.isalpha() and code.isupper()

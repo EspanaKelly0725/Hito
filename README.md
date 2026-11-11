@@ -7,6 +7,15 @@ what arrives among the people who helped.
 
 Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/).
 
+**Live demo: <https://hito-zz3z.onrender.com>** — press *Use the sample
+contract* and walk the five steps. It runs on Render's free tier, so the first
+load can take ~50 s while the instance wakes up; everything after that is
+instant. (The hosted copy runs the in-process PayPal gateway and the
+deterministic engine, both labelled in the header — see *Deploying* below for
+why.)
+
+Or run it yourself, which is the version with the real engine:
+
 ```bash
 pip install -r requirements.txt
 uvicorn app.main:app

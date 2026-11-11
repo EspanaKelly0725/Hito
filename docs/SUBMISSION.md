@@ -174,6 +174,18 @@ advice at contract time: given this client's profile, ask for a deposit.
 
 ## Try it (what judges need)
 
+**Hosted, nothing to install: <https://hito-zz3z.onrender.com>**
+
+Press *Seed history*, then *Use the sample contract*, and walk the five steps.
+It is on Render's free tier, so the first request can take ~50 seconds while
+the instance wakes up — after that it is instant. The hosted copy runs the
+in-process PayPal gateway and the deterministic engine, both labelled in the
+header, because a 2 GB open-source model does not fit a free instance and the
+whole argument for that model is that it runs on the freelancer's own machine.
+
+To see it with the real engine and real PayPal sandbox invoices, run it
+locally:
+
 ```bash
 git clone <repo> && cd hito
 pip install -r requirements.txt

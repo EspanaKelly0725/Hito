@@ -307,7 +307,7 @@ export function ModeBadges({ modes }: { modes: Modes }) {
             ? `All four agents run on ${modes.ai}, an open-source model on this machine, constrained by a JSON schema. No API key, no cost, and the contract never leaves the laptop.`
             : modes.ai_live
               ? `All four agents call ${modes.ai} with structured outputs.`
-              : "No model engine reachable, so every agent is using its deterministic fallback. The flow works; the writing is templated."}
+              : `Every agent is using its deterministic fallback, so the flow works but the writing is templated. ${modes.ai_detail} To turn the real engine on: install Ollama, then run "ollama pull qwen2.5:3b".`}
         </TooltipContent>
       </Tooltip>
 

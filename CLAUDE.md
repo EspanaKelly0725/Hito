@@ -7,9 +7,11 @@ Contexto para cualquier agente que trabaje en este repositorio.
 Agente de *contrato a caja* para freelancers: lee el contrato, factura cada hito
 por PayPal, estima la probabilidad de no pago con un modelo de riesgo propio,
 cobra con el tono que esa probabilidad merece y reparte lo que entra entre los
-colaboradores. Backend Python/FastAPI + SQLite, agentes sobre Claude
-(`claude-opus-5-5`), pasarela PayPal real (Invoicing v2, Payouts v1, Webhooks)
-con una implementación *mock* equivalente para que se pueda ejecutar sin cuentas.
+colaboradores. Backend Python/FastAPI + SQLite, agentes sobre un modelo **de código abierto
+corriendo en local** (Qwen2.5 3B Instruct, Apache-2.0, vía Ollama) con Claude
+como motor opcional, y pasarela PayPal real (Invoicing v2, Payouts v1,
+Webhooks) con una implementación *mock* equivalente para que se pueda ejecutar
+sin cuentas.
 
 - Todo lo que decide un agente se escribe en `events` con `actor='agent'`; todo
   lo que decide la persona, con `actor='human'`. Esa tabla es la bitácora de
@@ -18,7 +20,14 @@ con una implementación *mock* equivalente para que se pueda ejecutar sin cuenta
   (`app/agents/splitter.py`, `Decimal`); el modelo solo escribe el texto.
 - `app/agents/*` tienen todos un *fallback* determinista con el mismo contrato de
   salida. Si añades un agente, añade su fallback: la demo no puede depender de
-  que exista `ANTHROPIC_API_KEY`.
+  que haya un modelo disponible.
+- El motor por defecto es local y gratuito a propósito: un contrato lleva el
+  nombre, la dirección y los honorarios del cliente, y no tiene por qué salir
+  de la máquina. El razonamiento completo está en `docs/OPEN_MODEL.md`. No
+  conviertas a Claude en requisito.
+- Los dos backends de modelo se llaman con el mismo esquema JSON (`format` en
+  Ollama, `output_config.format` en Claude). Si añades un agente, defínele su
+  esquema: ningún agente parsea prosa.
 
 ---
 

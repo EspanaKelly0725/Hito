@@ -331,10 +331,12 @@ python -m pip install -r requirements-dev.txt
 python -m pytest tests -q
 ```
 
-39 tests covering the risk model's behaviour (monotonicity, calibration,
-band policy), the guardrails (every blocking check, the exact-cent split, the
-approval ceiling), the whole HTTP flow, webhook handling, the audit trail, and
-the MCP server.
+61 tests covering the risk model's behaviour (monotonicity, calibration, band
+policy), the guardrails (every blocking check, the exact-cent split, the
+approval ceiling), the engine layer (backend selection, falling through to the
+deterministic twin, never labelling a fallback as a model, fitting a contract
+into a local model's context window), the whole HTTP flow, webhook handling,
+the audit trail, and the MCP server.
 
 ### Deploying
 
@@ -376,7 +378,7 @@ scripts/
   make_dataset.py      regenerates the training data, seeded
   make_demo_pdf.py     regenerates the sample contract PDF, no PDF library
   export_openapi.py    writes docs/openapi.json from the live app
-tests/                 39 tests
+tests/                 61 tests
 ```
 
 ## Sponsor tools used

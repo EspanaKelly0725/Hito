@@ -105,7 +105,7 @@ def review(*, contract_text: str, project: dict, milestone: dict,
         f"  milestone state: {milestone.get('status')}\n"
         f"  delivery evidence from Laura: {milestone.get('evidence') or '(none given)'}\n\n"
         "--- CONTRACT TEXT ---\n"
-        f"{contract_text[:50000]}\n"
+        f"{llm.trim_to_budget(contract_text)}\n"
         "--- END CONTRACT TEXT ---\n\n"
         "Review this invoice."
     )

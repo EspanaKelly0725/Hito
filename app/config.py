@@ -96,6 +96,10 @@ class Settings:
             "ai_provider": engine["provider"],
             "ai_live": engine["live"],
             "ai_local": engine["provider"] == "ollama",
+            # Why the engine is what it is, in words a person can act on -
+            # the UI shows this so a judge is told how to turn the model on
+            # rather than left guessing why it says "rule engine".
+            "ai_detail": engine["detail"],
             "payout_threshold": self.payout_threshold,
             "webhook_verification": bool(self.paypal_webhook_id),
         }

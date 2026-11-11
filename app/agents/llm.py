@@ -387,6 +387,42 @@ def call_text(agent: str, *, system: str, user: str,
                            note="; ".join(notes) or ollama_status()["detail"])}
 
 
+def context_budget_chars(reserve_tokens: int = 1800) -> int:
+    """How much contract text the active engine can actually read.
+
+    A local 3B model runs in an 8K window by default. Handing it a ten-page
+    contract would silently truncate from the front, which is where the fee
+    schedule usually is - the worst possible thing to lose. So agents ask for a
+    budget instead of assuming one, and the caller trims the middle rather than
+    letting the runtime drop the beginning.
+
+    ~3.5 characters per token is close enough for English and Spanish prose.
+    """
+    if chain()[:1] == ["ollama"]:
+        usable = max(settings.ollama_ctx - reserve_tokens, 1024)
+        return int(usable * 3.5)
+    return 50000
+
+
+def trim_to_budget(text: str, budget: int | None = None) -> str:
+    """Keep the head and the tail, and say where the cut is.
+
+    The head carries the parties and the fee schedule; the tail carries
+    signatures and the late-payment terms. The middle is usually boilerplate.
+    """
+    budget = budget or context_budget_chars()
+    if len(text) <= budget:
+        return text
+    head = int(budget * 0.7)
+    tail = budget - head - 80
+    return (
+        text[:head]
+        + f"\n\n[... {len(text) - head - tail:,} characters omitted to fit the "
+          f"model's context window ...]\n\n"
+        + text[-tail:]
+    )
+
+
 def money(value: float) -> str:
     return f"{float(value):,.2f}"
 

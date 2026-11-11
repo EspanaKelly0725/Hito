@@ -60,10 +60,24 @@ Hito runs the whole thing, in five moments:
 remind), Payouts v1 (batch, status), and webhook signature verification, with
 idempotency keys on everything that moves money.
 
-**Claude** — four agents, each with a JSON schema through
-`output_config.format` so the backend never parses prose: a contract parser, an
-invoice reviewer, a collections writer and a payout writer. Server-side refusal
-fallback is requested on every call.
+**The AI engine — open source, running on the freelancer's own machine.**
+Four agents (a contract parser, an invoice reviewer, a collections writer and a
+payout writer) run on **Qwen2.5 3B Instruct, Apache-2.0**, served locally by
+Ollama. Claude is supported as a drop-in swap but is opt-in, not required.
+
+That choice is about the user, not about cost. A freelance contract carries the
+client's legal name, their billing address, the fee schedule, the payment terms
+and the collaborators' names and shares. Sending that to a third-party API to
+extract four numbers is a trade most freelancers would not make if anyone
+actually asked them. Hito does not ask, because it does not have to: the
+contract is read on the machine it was downloaded to, and nothing about it is
+transmitted. It is also free, which matters more than it sounds — re-reading a
+contract is something you do when the plan looks wrong, and a metered API
+quietly teaches you to do it less.
+
+Every agent is called with a JSON schema its output must satisfy — Ollama's
+`format`, Claude's `output_config.format` — so the backend never parses prose
+and the agents do not know which engine answered.
 
 **The risk model** — a logistic regression fitted in pure Python at boot on
 ~900 historical invoices and scored out of sample (AUC ≈ 0.70, Brier ≈ 0.18
@@ -99,6 +113,26 @@ An agent that can send invoices and move money needs more than good intentions:
   API and over MCP.
 - **One audit ledger.** Every decision recorded as `agent` or `human`, with
   every model call's tokens, latency and cost beside it.
+- **The guardrails do not depend on model quality.** This is what makes a 3B
+  local model a reasonable choice rather than a risk: the seven blocking checks
+  are deterministic Python, the arithmetic is `Decimal`, the ceiling is a
+  number, and every model output is a proposal a human approves. A better model
+  makes the writing better; it cannot make the money safer, because the model
+  was never what was keeping it safe.
+
+## How well does a 3B model actually read a contract?
+
+We measured instead of guessing. `scripts/eval_parser.py` scores the parser
+field by field — milestone count, amounts, total, due dates, client email,
+collaborator shares, currency, and whether each milestone carries a verbatim
+quote — against three contracts with known answers: the sample PDF, a Spanish
+one using `US$3.000` notation with dates written as "18 de octubre de 2026",
+and an English letter of engagement written in prose rather than as a list.
+
+The deterministic baseline scores 17/24. It gets 8/8 on the sample contract,
+which flatters it because those regexes were written against that contract, and
+2/8 on prose, where there is simply no list to find. That gap is the reason
+there is a model at all, and the numbers are in `docs/OPEN_MODEL.md`.
 
 ## Challenges we ran into
 
@@ -119,8 +153,15 @@ always says which mode is live.
 That the interesting problem was never the invoicing. It was deciding, with
 evidence, how to talk to someone who owes you money — and that this is exactly
 the kind of judgment call that should be split between a model and a number you
-can audit. Also, from fitting the model: cross-border barely survives. How a
-client paid you before beats where they are, by an order of magnitude.
+can audit.
+
+Also, two things we did not expect. From fitting the risk model: cross-border
+barely survives. How a client paid you before beats where they are, by an order
+of magnitude. And from swapping the engine: once the guardrails are
+deterministic, the model gets to be small, local and free — which turns out to
+be the version a freelancer in Medellín can actually afford to run on every
+contract that lands in her inbox, rather than the ones she decides are worth
+the API call.
 
 ## What's next
 
@@ -140,15 +181,25 @@ uvicorn app.main:app
 ```
 
 Open <http://localhost:8000>, press **Seed history**, then **Use the sample
-contract**. The whole five-step flow runs with no PayPal account and no API key
-— mock gateway and deterministic agents, clearly labelled. Add credentials to
-`.env` and the same screens drive the real PayPal sandbox and Claude; verify
-with `python scripts/check_credentials.py`.
+contract**. The whole five-step flow runs with **no accounts of any kind** —
+in-process PayPal gateway and deterministic agents, both clearly labelled in
+the header.
+
+To see it with the real engine, which needs no key either:
+
+```bash
+ollama pull qwen2.5:3b        # ~2 GB, once
+```
+
+Add PayPal sandbox credentials to `.env` for real invoices and payouts. Verify
+everything with `python scripts/check_credentials.py`, which tests each piece
+separately and prints no secrets.
 
 ## Built with
 
 `python` · `fastapi` · `sqlite` · `paypal-invoicing-v2` · `paypal-payouts-v1` ·
-`paypal-webhooks` · `claude` · `anthropic-api` · `structured-outputs` ·
+`paypal-webhooks` · `qwen2.5` · `ollama` · `open-source-llm` · `local-inference` ·
+`claude` · `anthropic-api` · `structured-outputs` ·
 `model-context-protocol` · `logistic-regression` · `react` · `typescript` ·
 `vite` · `tailwindcss` · `shadcn-ui` · `base-ui` · `ag-grid` · `sonner` ·
 `cmdk` · `number-flow` · `apimatic` · `render` · `docker`

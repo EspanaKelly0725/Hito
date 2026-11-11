@@ -111,7 +111,7 @@ def parse(contract_text: str, *, filename: str = "") -> dict:
         f"Contract file: {filename or 'contract.pdf'}\n"
         f"Today: {date.today().isoformat()}\n\n"
         "--- CONTRACT TEXT ---\n"
-        f"{contract_text[:60000]}\n"
+        f"{llm.trim_to_budget(contract_text)}\n"
         "--- END CONTRACT TEXT ---\n\n"
         "Extract the payment plan."
     )

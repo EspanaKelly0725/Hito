@@ -7,6 +7,7 @@ export interface Modes {
   ai_provider: "ollama" | "claude" | "rules"
   ai_live: boolean
   ai_local: boolean
+  ai_detail: string
   payout_threshold: number
   webhook_verification: boolean
 }

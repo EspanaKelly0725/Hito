@@ -8,8 +8,9 @@ recording with voice-over, the product doing the thing.
 **Before you record**
 
 ```bash
-cp .env.example .env            # fill in PayPal sandbox + ANTHROPIC_API_KEY
-python scripts/check_credentials.py   # must print OK for PayPal and Claude
+ollama pull qwen2.5:3b          # the open-source engine, ~2 GB, once
+cp .env.example .env            # fill in your PayPal sandbox credentials
+python scripts/check_credentials.py   # PayPal and the local model must say OK
 uvicorn app.main:app
 ```
 
@@ -31,6 +32,10 @@ Browser at ~1440px wide, zoom 110%, light mode. Have a second tab open on the
 PayPal sandbox inbox of the *buyer* account — showing the real invoice land
 there is the single most convincing second of the video.
 
+> The header should read `AI: qwen2.5:3b | local`. If it says `rule engine`,
+> the model is not pulled and the video will show templated text instead of a
+> model working — fix that before recording.
+>
 > Verified against the real sandbox on 11 Nov 2026: OAuth2, invoice-number
 > generation, invoice create, invoice send, the payer-view link, the reminder
 > call and a Payouts batch all work end to end. The only path that needs extra

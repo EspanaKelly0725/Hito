@@ -1,0 +1,389 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/instrument-sans";
+@import "@fontsource-variable/ibm-plex-sans";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+   Hito design tokens.
+
+   Not shadcn's default palette. This product is about money moving between
+   people who know each other, so the system is built on warm paper and ink
+   rather than cool grey: a single deep-teal accent for anything the agent did,
+   green only for money that actually arrived, and amber/red reserved
+   exclusively for the risk ladder - they appear nowhere else, so a warm row in
+   a table always means the same thing.
+
+   Type is Instrument Sans for the interface and IBM Plex Sans for headings and
+   figures, which gives the editorial contrast a financial document wants.
+   Radii are tight (--radius: 6px), shadows are thin and warm, and there is no
+   gradient in the product.
+   --------------------------------------------------------------------------- */
+
+:root {
+  color-scheme: light;
+
+  /* paper + ink */
+  --paper: hsl(42 38% 97%);
+  --paper-raised: hsl(40 44% 99%);
+  --ink: hsl(24 10% 12%);
+  --ink-soft: hsl(24 6% 38%);
+  --ink-faint: hsl(26 8% 56%);
+  --rule: hsl(32 14% 88%);
+  --rule-strong: hsl(30 12% 78%);
+
+  /* accent: the agent */
+  --teal: hsl(184 62% 26%);
+  --teal-soft: hsl(182 44% 93%);
+  --teal-ink: hsl(184 68% 18%);
+
+  /* money that arrived */
+  --green: hsl(158 58% 30%);
+  --green-soft: hsl(152 48% 93%);
+
+  /* the risk ladder, and nothing else */
+  --amber: hsl(32 86% 40%);
+  --amber-soft: hsl(42 92% 92%);
+  --red: hsl(2 68% 44%);
+  --red-soft: hsl(6 78% 95%);
+
+  /* shadcn contract, mapped onto the tokens above */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper-raised);
+  --card-foreground: var(--ink);
+  --popover: var(--paper-raised);
+  --popover-foreground: var(--ink);
+  --primary: var(--teal);
+  --primary-foreground: hsl(40 44% 99%);
+  --secondary: hsl(36 22% 92%);
+  --secondary-foreground: var(--ink);
+  --muted: hsl(36 20% 94%);
+  --muted-foreground: var(--ink-soft);
+  --accent: var(--teal-soft);
+  --accent-foreground: var(--teal-ink);
+  --destructive: var(--red);
+  --destructive-foreground: hsl(40 44% 99%);
+  --border: var(--rule);
+  --input: var(--rule-strong);
+  --ring: var(--teal);
+  --radius: 6px;
+
+  --chart-1: var(--teal);
+  --chart-2: var(--green);
+  --chart-3: var(--amber);
+  --chart-4: var(--red);
+  --chart-5: var(--ink-faint);
+
+  --sidebar: var(--paper-raised);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--teal);
+  --sidebar-primary-foreground: hsl(40 44% 99%);
+  --sidebar-accent: var(--teal-soft);
+  --sidebar-accent-foreground: var(--teal-ink);
+  --sidebar-border: var(--rule);
+  --sidebar-ring: var(--teal);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --paper: hsl(24 12% 9%);
+  --paper-raised: hsl(26 10% 13%);
+  --ink: hsl(40 24% 94%);
+  --ink-soft: hsl(36 10% 68%);
+  --ink-faint: hsl(34 8% 50%);
+  --rule: hsl(26 8% 22%);
+  --rule-strong: hsl(26 8% 32%);
+
+  --teal: hsl(176 58% 52%);
+  --teal-soft: hsl(184 40% 18%);
+  --teal-ink: hsl(176 60% 78%);
+
+  --green: hsl(156 48% 54%);
+  --green-soft: hsl(158 36% 16%);
+
+  --amber: hsl(36 88% 60%);
+  --amber-soft: hsl(34 50% 17%);
+  --red: hsl(4 72% 62%);
+  --red-soft: hsl(4 44% 18%);
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper-raised);
+  --card-foreground: var(--ink);
+  --popover: var(--paper-raised);
+  --popover-foreground: var(--ink);
+  --primary: var(--teal);
+  --primary-foreground: hsl(24 14% 10%);
+  --secondary: hsl(26 8% 19%);
+  --secondary-foreground: var(--ink);
+  --muted: hsl(26 8% 17%);
+  --muted-foreground: var(--ink-soft);
+  --accent: var(--teal-soft);
+  --accent-foreground: var(--teal-ink);
+  --destructive: var(--red);
+  --destructive-foreground: hsl(40 30% 96%);
+  --border: var(--rule);
+  --input: var(--rule-strong);
+  --ring: var(--teal);
+
+  --chart-1: var(--teal);
+  --chart-2: var(--green);
+  --chart-3: var(--amber);
+  --chart-4: var(--red);
+  --chart-5: var(--ink-faint);
+
+  --sidebar: var(--paper-raised);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--teal);
+  --sidebar-primary-foreground: hsl(24 14% 10%);
+  --sidebar-accent: var(--teal-soft);
+  --sidebar-accent-foreground: var(--teal-ink);
+  --sidebar-border: var(--rule);
+  --sidebar-ring: var(--teal);
+}
+
+@theme inline {
+  --font-sans: "Instrument Sans Variable", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", sans-serif;
+  --font-heading: "IBM Plex Sans Variable", "Instrument Sans Variable",
+    ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, monospace;
+
+  --shadow-card: 0 1px 2px rgb(28 25 23 / 0.05), 0 1px 1px rgb(28 25 23 / 0.04);
+  --shadow-raised: 0 2px 4px rgb(28 25 23 / 0.06), 0 10px 28px rgb(28 25 23 / 0.07);
+  --shadow-dialog: 0 24px 64px rgb(28 25 23 / 0.24);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-teal: var(--teal);
+  --color-teal-soft: var(--teal-soft);
+  --color-teal-ink: var(--teal-ink);
+  --color-green: var(--green);
+  --color-green-soft: var(--green-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-red: var(--red);
+  --color-red-soft: var(--red-soft);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* The one texture in the product: paper grain at 2%, no gradient anywhere. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.025;
+    background-image: radial-gradient(var(--ink) 0.5px, transparent 0.5px);
+    background-size: 4px 4px;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-heading {
+    font-family: var(--font-heading);
+    letter-spacing: -0.015em;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: var(--teal-soft);
+    color: var(--teal-ink);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   AG Grid, driven by the same tokens instead of its stock theme.
+   --------------------------------------------------------------------------- */
+
+.hito-grid {
+  --ag-background-color: transparent;
+  --ag-foreground-color: var(--ink);
+  --ag-border-color: var(--rule);
+  --ag-header-background-color: transparent;
+  --ag-header-foreground-color: var(--ink-faint);
+  --ag-odd-row-background-color: transparent;
+  --ag-row-hover-color: var(--muted);
+  --ag-selected-row-background-color: var(--teal-soft);
+  --ag-font-family: var(--font-sans);
+  --ag-font-size: 13px;
+  --ag-grid-size: 5px;
+  --ag-row-border-color: var(--rule);
+  --ag-cell-horizontal-padding: 14px;
+  --ag-borders: none;
+  --ag-wrapper-border-radius: 0;
+  --ag-input-focus-border-color: var(--ring);
+  --ag-checkbox-checked-color: var(--teal);
+  --ag-range-selection-border-color: var(--teal);
+  --ag-invalid-color: var(--red);
+}
+
+.hito-grid .ag-root-wrapper {
+  border: none;
+  background: transparent;
+}
+
+.hito-grid .ag-header {
+  border-bottom: 1px solid var(--rule-strong);
+  background: transparent;
+}
+
+.hito-grid .ag-header-cell-text {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hito-grid .ag-row {
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+}
+
+.hito-grid .ag-row-last {
+  border-bottom: none;
+}
+
+.hito-grid .ag-cell {
+  display: flex;
+  align-items: center;
+  line-height: 1.35;
+}
+
+.hito-grid .ag-cell-wrapper {
+  width: 100%;
+}
+
+.hito-grid .ag-cell-focus,
+.hito-grid .ag-cell-range-selected {
+  border: 1px solid var(--ring) !important;
+  outline: none;
+}
+
+.hito-grid .ag-row-overdue {
+  background-color: color-mix(in srgb, var(--amber-soft) 55%, transparent);
+}
+
+.hito-grid .ag-row-paid .ag-cell:first-child {
+  box-shadow: inset 2px 0 0 var(--green);
+}
+
+.hito-grid .ag-floating-bottom {
+  border-top: 1px solid var(--rule-strong);
+  background: transparent;
+  font-weight: 600;
+}
+
+.hito-grid .ag-overlay-no-rows-center {
+  color: var(--ink-faint);
+  font-size: 13px;
+}
+
+.hito-grid .ag-cell-inline-editing {
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 35%, transparent);
+  height: 100%;
+}
+
+.hito-grid input[class^="ag-"][type="text"],
+.hito-grid input[class^="ag-"][type="number"] {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  padding: 0 8px;
+}
+
+/* cmdk ----------------------------------------------------------------- */
+
+[cmdk-root] {
+  font-family: var(--font-sans);
+}
+
+[cmdk-item] {
+  cursor: pointer;
+}
+
+[cmdk-item][data-selected="true"] {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+[cmdk-group-heading] {
+  padding: 10px 12px 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}

@@ -1,0 +1,1079 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Hito API",
+    "version": "1.0.0",
+    "summary": "Contract-to-cash for freelancers, on PayPal.",
+    "description": "Hito reads a freelance contract, invoices each milestone through PayPal, estimates the probability that an invoice is never paid, asks for the money in the register that probability deserves, and splits what arrives among collaborators.\n\nTwo guardrails are part of the API contract rather than the UI:\n\n* `POST /api/milestones/{milestone_id}/deliver` runs an independent reviewer before PayPal is called. It can return `stage: \"blocked\"` (nothing is created) or `stage: \"hold\"` (a human must pass `override: true`).\n* `POST /api/payouts/{payout_id}/approve` only sends items above `PAYOUT_APPROVAL_THRESHOLD_USD` when their ids appear in `approved_item_ids`.\n\nWith no credentials configured the API is fully functional against an in-process PayPal gateway and a deterministic agent engine; `GET /api/status` always says which mode is live.",
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "paths": {
+    "/api/status": {
+      "get": {
+        "summary": "Status",
+        "operationId": "status_api_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Status Api Status Get"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Dashboard"
+        ]
+      }
+    },
+    "/api/risk/model": {
+      "get": {
+        "summary": "Risk Model Card",
+        "operationId": "risk_model_card_api_risk_model_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Risk Model Card Api Risk Model Get"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Risk"
+        ]
+      }
+    },
+    "/api/risk/score": {
+      "post": {
+        "summary": "Risk Score",
+        "description": "What-if endpoint: move the inputs, watch the tone decision change.",
+        "operationId": "risk_score_api_risk_score_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiskWhatIf"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Risk Score Api Risk Score Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Risk"
+        ]
+      }
+    },
+    "/api/contracts/parse": {
+      "post": {
+        "summary": "Parse Contract",
+        "operationId": "parse_contract_api_contracts_parse_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_parse_contract_api_contracts_parse_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Parse Contract Api Contracts Parse Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Contracts"
+        ]
+      }
+    },
+    "/api/projects": {
+      "post": {
+        "summary": "Approve Plan",
+        "description": "Laura approves the plan. This is the only way a project comes into being.",
+        "operationId": "approve_plan_api_projects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanApproval"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Approve Plan Api Projects Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Contracts"
+        ]
+      }
+    },
+    "/api/milestones/{milestone_id}/deliver": {
+      "post": {
+        "summary": "Deliver Milestone",
+        "description": "Laura says she delivered. The reviewer decides whether PayPal gets called.",
+        "operationId": "deliver_milestone_api_milestones__milestone_id__deliver_post",
+        "parameters": [
+          {
+            "name": "milestone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Milestone Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Delivery"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Deliver Milestone Api Milestones  Milestone Id  Deliver Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Invoicing"
+        ]
+      }
+    },
+    "/api/webhooks/paypal": {
+      "post": {
+        "summary": "Paypal Webhook",
+        "description": "PayPal webhook. Verified against the webhook id when one is configured.",
+        "operationId": "paypal_webhook_api_webhooks_paypal_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/milestones/{milestone_id}/simulate-payment": {
+      "post": {
+        "summary": "Simulate Payment",
+        "description": "Demo shortcut: pretend the client paid, through the same code path.\n\nIn mock mode this is the equivalent of clicking Pay on the invoice. With real\nPayPal credentials it marks the milestone paid locally so a demo can continue\nwithout waiting for a sandbox buyer to log in - the event log records that the\npayment was simulated, not received.",
+        "operationId": "simulate_payment_api_milestones__milestone_id__simulate_payment_post",
+        "parameters": [
+          {
+            "name": "milestone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Milestone Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Simulate Payment Api Milestones  Milestone Id  Simulate Payment Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/milestones/{milestone_id}/risk": {
+      "get": {
+        "summary": "Milestone Risk",
+        "operationId": "milestone_risk_api_milestones__milestone_id__risk_get",
+        "parameters": [
+          {
+            "name": "milestone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Milestone Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Milestone Risk Api Milestones  Milestone Id  Risk Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Risk"
+        ]
+      }
+    },
+    "/api/milestones/{milestone_id}/dunning": {
+      "post": {
+        "summary": "Draft Dunning",
+        "description": "Score the risk, let the band pick the tone, have Claude write the draft.",
+        "operationId": "draft_dunning_api_milestones__milestone_id__dunning_post",
+        "parameters": [
+          {
+            "name": "milestone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Milestone Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Draft Dunning Api Milestones  Milestone Id  Dunning Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Collections"
+        ]
+      }
+    },
+    "/api/dunning/{dunning_id}/send": {
+      "post": {
+        "summary": "Send Dunning",
+        "description": "Laura presses send. Delivered as a PayPal invoice reminder.",
+        "operationId": "send_dunning_api_dunning__dunning_id__send_post",
+        "parameters": [
+          {
+            "name": "dunning_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dunning Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DunningEdit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Send Dunning Api Dunning  Dunning Id  Send Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Collections"
+        ]
+      }
+    },
+    "/api/dunning": {
+      "get": {
+        "summary": "List Dunning",
+        "operationId": "list_dunning_api_dunning_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response List Dunning Api Dunning Get"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Collections"
+        ]
+      }
+    },
+    "/api/milestones/{milestone_id}/payout/propose": {
+      "post": {
+        "summary": "Propose Payout",
+        "operationId": "propose_payout_api_milestones__milestone_id__payout_propose_post",
+        "parameters": [
+          {
+            "name": "milestone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Milestone Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Propose Payout Api Milestones  Milestone Id  Payout Propose Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Payouts"
+        ]
+      }
+    },
+    "/api/payouts/{payout_id}/approve": {
+      "post": {
+        "summary": "Approve Payout",
+        "description": "Send the payout. Items above the ceiling only go if Laura ticked them.",
+        "operationId": "approve_payout_api_payouts__payout_id__approve_post",
+        "parameters": [
+          {
+            "name": "payout_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Payout Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayoutApproval"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Approve Payout Api Payouts  Payout Id  Approve Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Payouts"
+        ]
+      }
+    },
+    "/api/payouts": {
+      "get": {
+        "summary": "List Payouts",
+        "operationId": "list_payouts_api_payouts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response List Payouts Api Payouts Get"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Payouts"
+        ]
+      }
+    },
+    "/api/dashboard": {
+      "get": {
+        "summary": "Dashboard",
+        "operationId": "dashboard_api_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Dashboard Api Dashboard Get"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Dashboard"
+        ]
+      }
+    },
+    "/api/events": {
+      "get": {
+        "summary": "Events",
+        "operationId": "events_api_events_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  },
+                  "title": "Response Events Api Events Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Dashboard"
+        ]
+      }
+    },
+    "/api/demo/reset": {
+      "post": {
+        "summary": "Demo Reset",
+        "operationId": "demo_reset_api_demo_reset_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Demo Reset Api Demo Reset Post"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Demo"
+        ]
+      }
+    },
+    "/api/demo/contract": {
+      "get": {
+        "summary": "Demo Contract",
+        "operationId": "demo_contract_api_demo_contract_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "tags": [
+          "Demo"
+        ]
+      }
+    },
+    "/api/demo/seed": {
+      "post": {
+        "summary": "Demo Seed",
+        "description": "Seed the client's past behaviour, so the risk model has something to learn from.\n\nCreates one closed project with this same client that was paid late twice.\nThat history is what turns the second reminder from \"friendly\" into \"firm\" -\nthe risk score is computed from Hito's own ledger, not hardcoded.",
+        "operationId": "demo_seed_api_demo_seed_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Demo Seed Api Demo Seed Post"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Demo"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_parse_contract_api_contracts_parse_post": {
+        "properties": {
+          "file": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "binary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "title": "Body_parse_contract_api_contracts_parse_post"
+      },
+      "Collaborator": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "default": "collaborator"
+          },
+          "pct": {
+            "type": "number",
+            "title": "Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "pct"
+        ],
+        "title": "Collaborator"
+      },
+      "Delivery": {
+        "properties": {
+          "evidence": {
+            "type": "string",
+            "title": "Evidence",
+            "default": ""
+          },
+          "override": {
+            "type": "boolean",
+            "title": "Override",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "Delivery"
+      },
+      "DunningEdit": {
+        "properties": {
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "title": "DunningEdit"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Milestone": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "due_date": {
+            "type": "string",
+            "title": "Due Date",
+            "default": ""
+          },
+          "contract_quote": {
+            "type": "string",
+            "title": "Contract Quote",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "amount"
+        ],
+        "title": "Milestone"
+      },
+      "PayoutApproval": {
+        "properties": {
+          "approved_item_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Approved Item Ids"
+          }
+        },
+        "type": "object",
+        "title": "PayoutApproval"
+      },
+      "PlanApproval": {
+        "properties": {
+          "project_name": {
+            "type": "string",
+            "title": "Project Name"
+          },
+          "client_name": {
+            "type": "string",
+            "title": "Client Name"
+          },
+          "client_email": {
+            "type": "string",
+            "title": "Client Email"
+          },
+          "client_country": {
+            "type": "string",
+            "title": "Client Country",
+            "default": ""
+          },
+          "client_language": {
+            "type": "string",
+            "title": "Client Language",
+            "default": "en"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "USD"
+          },
+          "total_amount": {
+            "type": "number",
+            "title": "Total Amount",
+            "default": 0
+          },
+          "payment_terms": {
+            "type": "string",
+            "title": "Payment Terms",
+            "default": ""
+          },
+          "contract_text": {
+            "type": "string",
+            "title": "Contract Text",
+            "default": ""
+          },
+          "contract_filename": {
+            "type": "string",
+            "title": "Contract Filename",
+            "default": ""
+          },
+          "contract_summary": {
+            "type": "string",
+            "title": "Contract Summary",
+            "default": ""
+          },
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/Milestone"
+            },
+            "type": "array",
+            "title": "Milestones"
+          },
+          "collaborators": {
+            "items": {
+              "$ref": "#/components/schemas/Collaborator"
+            },
+            "type": "array",
+            "title": "Collaborators"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_name",
+          "client_name",
+          "client_email"
+        ],
+        "title": "PlanApproval"
+      },
+      "RiskWhatIf": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "default": 3000
+          },
+          "prior_late_ratio": {
+            "type": "number",
+            "title": "Prior Late Ratio",
+            "default": 0.0
+          },
+          "prior_avg_days_late": {
+            "type": "number",
+            "title": "Prior Avg Days Late",
+            "default": 0.0
+          },
+          "relationship_invoices": {
+            "type": "integer",
+            "title": "Relationship Invoices",
+            "default": 0
+          },
+          "cross_border": {
+            "type": "boolean",
+            "title": "Cross Border",
+            "default": true
+          },
+          "days_overdue": {
+            "type": "number",
+            "title": "Days Overdue",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "RiskWhatIf"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local"
+    },
+    {
+      "url": "https://hito.onrender.com",
+      "description": "Render deployment"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Contracts",
+      "description": "Read a contract and turn it into an approved payment plan."
+    },
+    {
+      "name": "Invoicing",
+      "description": "Deliver a milestone, clear the reviewer, invoice through PayPal Invoicing v2."
+    },
+    {
+      "name": "Payments",
+      "description": "PayPal webhooks and the payment state of each milestone."
+    },
+    {
+      "name": "Collections",
+      "description": "Score the risk of not being paid and draft the message that risk deserves."
+    },
+    {
+      "name": "Payouts",
+      "description": "Split a payment among collaborators through PayPal Payouts, under an approval ceiling."
+    },
+    {
+      "name": "Risk",
+      "description": "The risk model: its card, and a what-if endpoint."
+    },
+    {
+      "name": "Dashboard",
+      "description": "Everything the UI reads."
+    },
+    {
+      "name": "Demo",
+      "description": "Seed and reset the demo data."
+    }
+  ]
+}

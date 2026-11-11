@@ -1,0 +1,40 @@
+# Render blueprint. Push this repo, point Render at it, and the app comes up
+# with the in-process PayPal gateway and the rule-based AI engine - a working
+# demo with no secrets at all. Fill the environment variables below in the
+# Render dashboard to switch to the real PayPal sandbox and Claude.
+services:
+  - type: web
+    name: hito
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/status
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      # SQLite on the mounted disk, so the ledger survives a deploy.
+      - key: HITO_DB
+        value: /var/data/hito.db
+      - key: PAYPAL_ENV
+        value: sandbox
+      - key: PAYOUT_APPROVAL_THRESHOLD_USD
+        value: "800"
+      # Set these in the dashboard. Left unset, Hito runs the mock gateway and
+      # the deterministic agents, and says so in the UI.
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_INVOICER_EMAIL
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+    disk:
+      name: hito-data
+      mountPath: /var/data
+      sizeGB: 1

@@ -203,3 +203,70 @@ def test_curly_quotes_around_a_real_clause_are_stripped():
     quote = "Milestone 1 - Logo and primary marks: US$3,000, due on October 10, 2026."
     assert reviewer.verify_evidence(f"\u201c{quote}\u201d",
                                     CONTRACT_WITH_CLAUSE) == quote
+
+
+# --- the collection message is the only model output a CLIENT reads --------
+
+from app.agents.collector import review_draft  # noqa: E402
+
+# verbatim from a qwen2.5:3b run: every claim in it is invented
+FABRICATED = (
+    "Dear Bluebonnet Coffee Roasters LLC,\n\n"
+    "I hope this message finds you well. Please note that this is the final "
+    "reminder, and I expect payment to avoid any further consequences.\n\n"
+    "I appreciate your prompt attention to this matter. Should you have any "
+    "questions, please do not hesitate to contact me.\n\n"
+    "P.S. Accepting the payment plan is the easiest option for you. Please "
+    "refer to the attached payment link for the details."
+)
+
+CLEAN = (
+    "Hi Bluebonnet,\n\n"
+    "Invoice 0010 for USD 3,000.00, covering the website build, was due on "
+    "October 28 and is now 14 days overdue.\n\n"
+    "Could you settle it by November 16? The work is delivered and in use.\n\n"
+    "Best,\nLaura Restrepo"
+)
+
+
+def test_a_clean_reminder_raises_nothing():
+    assert review_draft(CLEAN, offer=None, reminder_count=0) == []
+
+
+def test_every_fabrication_in_the_real_output_is_caught():
+    found = {f["check"] for f in review_draft(FABRICATED, offer=None,
+                                              reminder_count=0)}
+    assert "offers_unoffered_plan" in found, "it offered terms that do not exist"
+    assert "claims_finality" in found, "it called the first reminder the final one"
+    assert "invents_attachment" in found, "it referenced an attachment we never send"
+    assert "opens_with_filler" in found
+    assert "closes_with_filler" in found
+
+
+def test_a_payment_plan_is_fine_when_a_plan_is_actually_offered():
+    offer = {"kind": "split_in_two", "first": 1500.0, "second": 1500.0,
+             "first_date": "2026-11-18", "second_date": "2026-12-18"}
+    body = ("Hi Bluebonnet,\n\nLet me offer a payment plan: USD 1,500.00 by "
+            "November 18 and USD 1,500.00 by December 18.\n\nBest,\nLaura")
+    found = {f["check"] for f in review_draft(body, offer=offer, reminder_count=0)}
+    assert "offers_unoffered_plan" not in found
+
+
+def test_calling_it_final_is_allowed_by_the_third_reminder():
+    body = "Hi,\n\nThis is the final reminder for invoice 0010.\n\nBest,\nLaura"
+    assert "claims_finality" in {
+        f["check"] for f in review_draft(body, offer=None, reminder_count=0)}
+    assert "claims_finality" not in {
+        f["check"] for f in review_draft(body, offer=None, reminder_count=2)}
+
+
+def test_a_threat_of_legal_action_is_always_flagged():
+    body = "Hi,\n\nPay or I will pursue legal action.\n\nLaura"
+    found = {f["check"] for f in review_draft(body, offer=None, reminder_count=5)}
+    assert "threatens_escalation" in found
+
+
+def test_an_overlong_reminder_is_flagged():
+    body = "Hi,\n\n" + ("word " * 240) + "\n\nLaura"
+    assert "too_long" in {
+        f["check"] for f in review_draft(body, offer=None, reminder_count=0)}

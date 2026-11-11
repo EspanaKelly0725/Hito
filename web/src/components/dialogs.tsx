@@ -330,6 +330,23 @@ export function DunningDialog({
           </div>
 
           <div className="space-y-3">
+            {message.warnings?.length ? (
+              <div className="rounded-md border border-amber/40 bg-amber-soft/40 px-3 py-2.5">
+                <div className="mb-1 inline-flex items-center gap-1.5 text-[12px] font-semibold text-amber">
+                  <AlertTriangleIcon className="size-3.5" />
+                  Check these before sending
+                </div>
+                <ul className="list-inside list-disc space-y-0.5 text-[12.5px] text-ink">
+                  {message.warnings.map((warning) => (
+                    <li key={warning.check}>{warning.detail}</li>
+                  ))}
+                </ul>
+                <p className="mt-1.5 text-[11.5px] text-ink-faint">
+                  Found by checking the draft against what the model was
+                  actually given. Nothing was changed for you.
+                </p>
+              </div>
+            ) : null}
             <div>
               <Label htmlFor="dunning-subject" className="text-[12px]">
                 Subject

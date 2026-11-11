@@ -328,6 +328,7 @@ export interface DunningDraft {
       first_date: string
       second_date: string
     } | null
+    warnings?: { check: string; detail: string }[]
     _meta: AgentMeta
   }
 }

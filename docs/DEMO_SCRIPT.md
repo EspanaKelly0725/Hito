@@ -32,6 +32,36 @@ Browser at ~1440px wide, zoom 110%, light mode. Have a second tab open on the
 PayPal sandbox inbox of the *buyer* account — showing the real invoice land
 there is the single most convincing second of the video.
 
+### Recording with the local model: plan for the wait
+
+Measured on the reference laptop (Intel Core Ultra 5, no dedicated GPU):
+
+| Step | Agent | Wall clock |
+| --- | --- | --- |
+| Reading the contract | `contract_parser` | ~50 s |
+| "I delivered this" | `reviewer` | ~45 s |
+| "Chase with tact" | `collector` | ~27 s |
+| "Split it" | `splitter` | ~22 s |
+
+About 2½ minutes of model time across the whole demo, which does not fit in a
+3-minute video. Three things make it work:
+
+1. **Keep the model warm.** Ollama unloads it after a few idle minutes, and the
+   first call after that pays the load time again. Before recording:
+   `setx OLLAMA_KEEP_ALIVE 30m` (restart Ollama), then run one contract through
+   so the weights are in RAM.
+2. **Cut on the toast.** Each long call puts up a toast saying what it is doing
+   — "The reviewer is checking this against the contract…". Cut on the toast,
+   resume on the result. The viewer sees the system working, not a frozen
+   screen, and the edit is honest about what happened.
+3. **Say the number out loud.** "This runs on a 3-billion-parameter open-source
+   model on my laptop — no API key, and the contract never leaves the machine"
+   turns the wait into the point instead of an apology for it.
+
+If you would rather not edit around it, `HITO_LLM_PROVIDER=claude` with a key
+makes every step a couple of seconds — at the cost of the privacy argument that
+is one of the best things about the project. Your call; the flow is identical.
+
 > The header should read `AI: qwen2.5:3b | local`. If it says `rule engine`,
 > the model is not pulled and the video will show templated text instead of a
 > model working — fix that before recording.

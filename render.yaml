@@ -1,7 +1,21 @@
-# Render blueprint. Push this repo, point Render at it, and the app comes up
-# with the in-process PayPal gateway and the rule-based AI engine - a working
-# demo with no secrets at all. Fill the environment variables below in the
-# Render dashboard to switch to the real PayPal sandbox and Claude.
+# Render blueprint.
+#
+# Deploys with NO secrets at all: the in-process PayPal gateway and the
+# deterministic engine, both labelled as such in the header. That is the point
+# of the hosted demo - a judge can click through the whole five-step flow
+# without installing anything or creating an account.
+#
+# Two honest notes about what the hosted version is and is not:
+#
+# * The AI engine here is the deterministic rule engine. Hito's real engine is
+#   an open-source model (qwen2.5:3b) running locally, and a ~2 GB model does
+#   not fit a free Render instance. To see the model, run it locally - see
+#   docs/OPEN_MODEL.md. Setting ANTHROPIC_API_KEY below is the other way to
+#   give the hosted demo a real model.
+# * The free plan has no persistent disk, so SQLite lives in the container and
+#   resets on every deploy and every cold start. That is fine for a demo and
+#   wrong for anything else; the `disk` block below is commented out and is
+#   what you would add on a paid plan.
 services:
   - type: web
     name: hito
@@ -15,15 +29,16 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.7"
-      # SQLite on the mounted disk, so the ledger survives a deploy.
-      - key: HITO_DB
-        value: /var/data/hito.db
       - key: PAYPAL_ENV
         value: sandbox
       - key: PAYOUT_APPROVAL_THRESHOLD_USD
         value: "800"
-      # Set these in the dashboard. Left unset, Hito runs the mock gateway and
-      # the deterministic agents, and says so in the UI.
+      # No Ollama on a free instance, so do not let the app sit there probing
+      # for a local model server that will never answer.
+      - key: HITO_LLM_PROVIDER
+        value: rules
+      # Set these in the Render dashboard to point the hosted demo at your real
+      # PayPal sandbox. Left unset, it runs the in-process gateway and says so.
       - key: PAYPAL_CLIENT_ID
         sync: false
       - key: PAYPAL_CLIENT_SECRET
@@ -32,9 +47,15 @@ services:
         sync: false
       - key: PAYPAL_WEBHOOK_ID
         sync: false
+      # Optional: give the hosted demo a real model. Costs pennies per demo.
+      # Setting this also means removing HITO_LLM_PROVIDER above, or setting it
+      # to "claude".
       - key: ANTHROPIC_API_KEY
         sync: false
-    disk:
-      name: hito-data
-      mountPath: /var/data
-      sizeGB: 1
+
+    # Paid plans only - a free web service cannot mount a disk, and including
+    # this block makes the blueprint fail to apply.
+    # disk:
+    #   name: hito-data
+    #   mountPath: /var/data
+    #   sizeGB: 1

@@ -340,10 +340,19 @@ the audit trail, and the MCP server.
 
 ### Deploying
 
-`render.yaml` is a working Render blueprint — it deploys with no secrets at
-all, into mock mode, and switches to the real sandbox when you fill the
-environment variables in the dashboard. There is also a `Dockerfile` for
-anywhere else. The frontend is pre-built and committed, so neither needs Node.
+`render.yaml` is a working Render blueprint. It deploys with no secrets at all
+— in-process PayPal gateway, deterministic engine, both labelled in the header
+— so a judge can click through the whole flow without installing anything. Fill
+the environment variables in the Render dashboard to point it at your real
+sandbox. There is also a `Dockerfile` for anywhere else. The frontend is
+pre-built and committed, so neither needs Node.
+
+Worth saying plainly: **the hosted demo runs the rule engine, not the model.**
+A ~2 GB open-source model does not fit a free Render instance, and Hito's whole
+argument for that model is that it runs on the freelancer's own machine. The
+hosted URL is the no-install path; `ollama pull qwen2.5:3b` locally is the
+real one. (Setting `ANTHROPIC_API_KEY` in the Render dashboard is the other way
+to give the hosted demo a real model.)
 
 ---
 

@@ -224,7 +224,15 @@ def chain() -> list[str]:
 
 def status() -> dict:
     """What the UI and /api/status report about the engine."""
-    local = ollama_status()
+    # Only probe for a local model if one could actually be used. A deployment
+    # pinned to "rules" or "claude" should not be opening sockets to a model
+    # server that will never be there.
+    local = (
+        ollama_status()
+        if settings.llm_provider in ("auto", "ollama")
+        else {"ok": False, "detail": f"engine pinned to {settings.llm_provider}",
+              "models": []}
+    )
     order = chain()
     active = order[0] if order else "rules"
     if active == "ollama":

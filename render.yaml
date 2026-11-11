@@ -47,14 +47,16 @@ services:
       # model with the same JSON-schema contract, and the local path stays the
       # real one. See docs/OPEN_MODEL.md.
       #
-      # Free alternatives with schema support, if this one is rate-limited:
-      #   baidu/ernie-5.5-flash-preview:free
-      #   dots-studio/dots-3-note-preview:free
-      #   openrouter/free            (auto-routes across free models)
+      # Picked by measurement, not by reading the catalogue: of the nine free
+      # models advertising JSON-schema support, most returned text that would
+      # not parse. This one scored 22/24 on scripts/eval_parser.py, including
+      # 8/8 on the prose contract. liquid/lfm-2.5-2.6b:free is 3x faster and
+      # scored the same, but one call in three failed outright - fine for a
+      # fallback, not for the demo a judge opens.
       - key: HITO_REMOTE_BASE_URL
         value: https://openrouter.ai/api/v1
       - key: HITO_REMOTE_MODEL
-        value: nvidia/nemotron-3.5-super-vl:free
+        value: baidu/ernie-5.5-flash-preview:free
       # Set this in the dashboard. Without it, the deterministic engine runs.
       - key: HITO_REMOTE_API_KEY
         sync: false

@@ -162,6 +162,11 @@ def _remote_chat(*, system: str, user: str, schema: dict | None,
         "messages": messages,
         "temperature": 0,
         "max_tokens": max_tokens,
+        # Several free models are reasoning models that spend the token budget
+        # thinking and then return empty content. We want the extraction, not
+        # the deliberation; providers that do not know this field ignore it,
+        # and the 400 path below covers the ones that reject it.
+        "reasoning": {"enabled": False},
     }
     if schema is not None:
         payload["response_format"] = {
@@ -182,18 +187,24 @@ def _remote_chat(*, system: str, user: str, schema: dict | None,
         )
 
     response = post(payload)
-    if response.status_code == 400 and schema is not None:
-        # Not every model behind an OpenAI-compatible endpoint supports a full
-        # JSON schema. Degrade to plain JSON mode and put the shape in the
-        # prompt; _loads() is already tolerant of what that returns.
-        relaxed = dict(payload, response_format={"type": "json_object"})
-        relaxed["messages"] = [
-            messages[0],
-            {"role": "user",
-             "content": f"{user}\n\nReply with JSON matching this schema "
-                        f"exactly:\n{json.dumps(schema)}"},
-        ]
-        response = post(relaxed)
+
+    if response.status_code == 400:
+        # Endpoints differ in what they accept. Drop the reasoning switch
+        # first; only then degrade the schema. Failing the agent is the last
+        # resort, not the first.
+        retry = {k: v for k, v in payload.items() if k != "reasoning"}
+        response = post(retry)
+        if response.status_code == 400 and schema is not None:
+            # Some models take JSON mode but not a full schema. Put the shape
+            # in the prompt; _loads() tolerates what comes back.
+            relaxed = dict(retry, response_format={"type": "json_object"})
+            relaxed["messages"] = [
+                messages[0],
+                {"role": "user",
+                 "content": f"{user}\n\nReply with JSON matching this schema "
+                            f"exactly:\n{json.dumps(schema)}"},
+            ]
+            response = post(relaxed)
 
     response.raise_for_status()
     body = response.json()
@@ -202,10 +213,29 @@ def _remote_chat(*, system: str, user: str, schema: dict | None,
     choices = body.get("choices") or []
     if not choices:
         raise RuntimeError("remote model returned no choices")
-    text = (choices[0].get("message") or {}).get("content") or ""
-    usage = body.get("usage") or {}
+
+    choice = choices[0]
+    message = choice.get("message") or {}
+    text = message.get("content") or ""
+
     if not text.strip():
-        raise RuntimeError("remote model returned an empty response")
+        # Several free models are reasoning models: they spend the budget
+        # thinking and leave content empty, with the answer - if there is one -
+        # inside the reasoning trace. Salvage it rather than discard the call.
+        salvage = message.get("reasoning") or ""
+        if "{" in salvage and "}" in salvage:
+            text = salvage
+        else:
+            details = (body.get("usage") or {}).get(
+                "completion_tokens_details"
+            ) or {}
+            raise RuntimeError(
+                "remote model returned an empty response "
+                f"(finish_reason={choice.get('finish_reason')}, "
+                f"reasoning_tokens={details.get('reasoning_tokens')})"
+            )
+
+    usage = body.get("usage") or {}
     return text, {
         "input_tokens": int(usage.get("prompt_tokens") or 0),
         "output_tokens": int(usage.get("completion_tokens") or 0),
@@ -427,7 +457,7 @@ def call_json(agent: str, *, system: str, user: str, schema: dict,
             if backend == "remote":
                 text, tokens = _remote_chat(
                     system=system, user=user, schema=schema,
-                    max_tokens=min(max_tokens, 4096),
+                    max_tokens=max(max_tokens, 8192),
                 )
                 data = _loads(text)
                 data["_meta"] = _meta(agent, "remote", settings.remote_model,

@@ -75,7 +75,7 @@ through an OpenAI-compatible endpoint instead:
 ```bash
 HITO_REMOTE_BASE_URL=https://openrouter.ai/api/v1
 HITO_REMOTE_API_KEY=sk-or-...
-HITO_REMOTE_MODEL=nvidia/nemotron-3.5-super-vl:free
+HITO_REMOTE_MODEL=baidu/ernie-5.5-flash-preview:free
 ```
 
 Any OpenAI-compatible endpoint works — OpenRouter, Groq, Together, your own
@@ -110,11 +110,47 @@ Two things make that an acceptable trade rather than a hole:
    python scripts/eval_parser.py --provider ollama
    ```
 
-The free hosted model has **not** been benchmarked the way Qwen2.5 has — the
-24/24 in the table above is Qwen2.5 on a laptop, not the hosted model. Measure
-it before trusting it:
+### Which free model, and how it was picked
+
+By measurement, not by reading the catalogue. Nine free models on OpenRouter
+advertise JSON-schema support; most of them returned text that would not parse,
+and the one chosen first by reputation returned empty content on a real
+contract because it is a reasoning model that spent its whole token budget
+thinking. (The backend now disables reasoning where the endpoint allows it,
+salvages an answer out of the reasoning trace when it does not, and reports the
+finish reason when it still comes back empty.)
+
+Two survived a real run:
+
+| Free model | Score | Median latency | Note |
+| --- | --- | --- | --- |
+| `baidu/ernie-5.5-flash-preview:free` | **22/24** | 16.5 s | all three contracts ran on the model |
+| `liquid/lfm-2.5-2.6b:free` | 22/24 | 5.1 s | one call in three failed outright |
+
+ERNIE is the default: for a demo a judge opens, a call that fails is worse than
+a call that takes eleven seconds longer. LFM is the faster alternative if you
+are willing to accept the misses.
+
+### Hosted vs local, measured the same way
+
+| | Local — Qwen2.5 3B | Hosted — ERNIE 5.5 flash (free) |
+| --- | --- | --- |
+| Sample PDF | 8/8 | 7/8 |
+| Spanish, `US$3.000`, dates in words | 8/8 | 7/8 |
+| **Prose, no list** | **8/8** | **8/8** |
+| Overall | **24/24** | 22/24 |
+| Median latency | 55 s (laptop CPU) | 16.5 s |
+| Cost | none | none |
+| Contract leaves the machine | no | **yes** |
+
+The local model is more accurate and completely private; the hosted one is
+faster because it is not running on a thin laptop. Both clear the bar that
+matters — 8/8 on the prose contract, where a regex gets 2/8.
+
+Reproduce either:
 
 ```bash
+python scripts/eval_parser.py --provider ollama
 python scripts/eval_parser.py --provider remote
 ```
 

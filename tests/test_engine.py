@@ -32,6 +32,20 @@ def provider():
 
 
 @pytest.fixture
+def no_remote_model():
+    """Unset the hosted backend for one test.
+
+    Same lesson as no_local_model: a test about "nothing is configured" must
+    not depend on what the developer happens to have in .env.
+    """
+    base, key = settings.remote_base_url, settings.remote_api_key
+    settings.remote_base_url = ""
+    settings.remote_api_key = ""
+    yield
+    settings.remote_base_url, settings.remote_api_key = base, key
+
+
+@pytest.fixture
 def no_local_model():
     """Point the local backend at a dead port.
 
@@ -64,7 +78,7 @@ def test_pinning_a_provider_uses_only_that_one(provider):
 
 
 def test_auto_falls_back_to_rules_when_nothing_is_configured(
-    provider, no_local_model
+    provider, no_local_model, no_remote_model
 ):
     provider("auto")
     assert not settings.anthropic_api_key, "the suite runs without a key"
@@ -213,9 +227,10 @@ def remote_configured():
     settings.remote_base_url, settings.remote_api_key = base, key
 
 
-def test_remote_is_only_offered_when_it_is_configured(provider, no_local_model):
+def test_remote_is_only_offered_when_it_is_configured(provider, no_local_model,
+                                                      no_remote_model):
     provider("auto")
-    assert "remote" not in llm.chain(), "no endpoint configured in the suite"
+    assert "remote" not in llm.chain()
 
 
 def test_auto_prefers_the_local_model_over_the_hosted_one(provider,

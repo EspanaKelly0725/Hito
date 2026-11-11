@@ -371,8 +371,11 @@ who only clicks the link still sees a model working.
 **It is not running Qwen2.5, and the reason is money.** Qwen2.5 is free on your
 own hardware, which is why Hito is built around it; having a provider serve it
 is metered, and this project has no budget for paid inference. So the hosted
-tier runs a *free* open-weights model, which is a different model, and the UI
-says `open weights` rather than `local` so nobody is misled. Give the
+tier runs a *free* open-weights model — ERNIE 5.5 flash, picked by running
+`scripts/eval_parser.py` against nine candidates rather than by reading the
+catalogue — and the UI says `open weights` rather than `local` so nobody is
+misled. It scores 22/24 against the local model's 24/24, and both get 8/8 on
+the prose contract where a regex gets 2/8. Give the
 deployment a budget and `HITO_REMOTE_MODEL=qwen/qwen3-32b` is the entire
 change — all four agents go through one wrapper and one JSON schema.
 

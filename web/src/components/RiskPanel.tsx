@@ -56,7 +56,6 @@ export function RiskPanel({ card }: { card: ModelCard }) {
   return (
     <section>
       <SectionTitle
-        step="—"
         title="The risk model"
         hint="logistic regression, fitted on boot, scored out of sample"
       />

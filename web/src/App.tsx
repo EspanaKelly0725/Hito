@@ -20,6 +20,7 @@ import {
   InvoicesGrid,
   MilestonesGrid,
 } from "@/components/grids"
+import { NextSteps } from "@/components/NextSteps"
 import { RiskPanel } from "@/components/RiskPanel"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -307,6 +308,19 @@ export default function App() {
           </section>
         ) : null}
 
+        {data && milestones.length > 0 ? (
+          <NextSteps
+            milestones={milestones}
+            splitDone={splitDone}
+            modes={data.modes}
+            busyId={busyId}
+            onDeliver={(m) => void deliver(m)}
+            onChase={(m) => void chase(m.id)}
+            onSplit={(m) => void split(m)}
+            onPay={(m) => void pay(m)}
+          />
+        ) : null}
+
         {!data || milestones.length === 0 ? (
           <>
             <ContractStep onApproved={refresh} />
@@ -338,8 +352,7 @@ export default function App() {
             <TabsContent value="flow" className="space-y-6">
               <section>
                 <SectionTitle
-                  step="02"
-                  title="Deliver, and Hito invoices"
+                  title="Every milestone in this contract"
                   hint="every invoice clears the reviewer before PayPal is called"
                 >
                   <Button variant="ghost" size="sm" onClick={reset}>
@@ -359,7 +372,6 @@ export default function App() {
               {data.payouts.length ? (
                 <section>
                   <SectionTitle
-                    step="05"
                     title="What went out to the team"
                     hint={`items above ${money(data.modes.payout_threshold)} need your tick`}
                   />
@@ -426,7 +438,6 @@ export default function App() {
             <TabsContent value="risk" className="space-y-6">
               <section>
                 <SectionTitle
-                  step="04"
                   title="Collect, with the tone the risk deserves"
                   hint="sorted by what each invoice could cost you"
                 />

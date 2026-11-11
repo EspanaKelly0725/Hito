@@ -163,7 +163,7 @@ contract PDF
 | Layer | Choice | Why |
 | --- | --- | --- |
 | Backend | FastAPI + SQLite, no ORM | `pip install` + `uvicorn` and it runs. The schema is 9 tables in one file. |
-| Agents | Claude `claude-opus-5-5` with structured outputs | Every agent returns a JSON schema, so the backend never parses prose or repairs malformed JSON. |
+| Agents | Qwen2.5 3B Instruct (Apache-2.0) locally via Ollama, Claude optional | Open source, free to run, and the contract never leaves the machine. Both backends are schema-constrained, so the agents never parse prose. |
 | Risk | Logistic regression in pure Python | No numpy, no scikit-learn, ~25 ms to fit at boot, and the whole thing is auditable in 240 lines. |
 | Frontend | Vite + React + Tailwind + shadcn/ui (Base UI), AG Grid Community, Sonner, cmdk, NumberFlow | Compiled to `app/static` and **committed**, so judges need no Node. |
 | Payments | PayPal Invoicing v2, Payouts v1, Webhooks v1 | The three APIs the product actually needs. |
@@ -194,30 +194,49 @@ active is decided once, in `app/paypal/__init__.py`, and shown in the header.
 
 ---
 
-## Claude, specifically
+## The AI engine: open source, on your machine
+
+Hito's default engine is **Qwen2.5 3B Instruct** — Apache-2.0, open source, run
+locally through [Ollama](https://ollama.com). No account, no API key, no
+per-token bill, and **the contract never leaves the laptop**, which for a
+document carrying a client's legal name, address and fee schedule is the right
+default rather than a feature. Claude is supported and is a drop-in swap, but
+it is opt-in. Full rationale, benchmark and limitations:
+[`docs/OPEN_MODEL.md`](docs/OPEN_MODEL.md).
+
+```bash
+ollama pull qwen2.5:3b     # ~2 GB, once. Hito finds it by itself.
+```
 
 Four agents, all through one wrapper ([`app/agents/llm.py`](app/agents/llm.py)):
 
-| Agent | Does | Output |
-| --- | --- | --- |
-| `contract_parser` | Reads the contract into a payment plan, with the contract sentence behind every milestone and warnings about what is vague | structured JSON, effort `high` |
-| `reviewer` | Independently checks each invoice against the contract and objects, quoting the clause | structured JSON, effort `high` |
-| `collector` | Writes the collection message *inside* the tone the risk model chose, in the client's language | structured JSON, effort `medium` |
-| `splitter` | Writes the payout copy around amounts it is forbidden to change | structured JSON, effort `low` |
+| Agent | Does |
+| --- | --- |
+| `contract_parser` | Reads the contract into a payment plan, with the contract sentence behind every milestone and warnings about what is vague |
+| `reviewer` | Independently checks each invoice against the contract and objects, quoting the clause |
+| `collector` | Writes the collection message *inside* the tone the risk model chose, in the client's language |
+| `splitter` | Writes the payout copy around amounts it is forbidden to change |
 
 Implementation notes that matter:
 
-- **Structured outputs** via `output_config={"format": {"type": "json_schema", …}}`
-  on every call.
-- **Server-side refusal fallback** (`betas=["server-side-fallback-2026-07-01"]`,
-  `fallbacks="default"`) is requested on every call and degrades silently if
-  the SDK or platform does not support it.
-- **Every agent has a deterministic twin** with the same output contract. With
-  no `ANTHROPIC_API_KEY` the product still works end to end, and the UI labels
-  it `rule engine` rather than pretending. This is why the demo cannot
-  dead-end on a missing key.
-- **Observability**: model, engine, latency, input/output tokens and cost are
-  recorded per call in `agent_runs` and shown in the Agent log tab.
+- **Structured outputs everywhere.** Every agent is called with a JSON schema
+  the output must satisfy — Ollama's `format` field, Claude's
+  `output_config.format`. The backend never parses prose and never repairs
+  malformed JSON, and the agents do not know which engine answered.
+- **Three backends, one contract.** Local model → Claude (if a key is set) →
+  deterministic rule engine, falling through on failure. Pin one with
+  `HITO_LLM_PROVIDER`.
+- **Every agent has a deterministic twin.** With no model at all the product
+  still works end to end, and the UI labels it `rule engine` rather than
+  pretending. This is why the demo cannot dead-end, and why a judge who has not
+  installed Ollama still sees the whole flow.
+- **Measured, not asserted.** `scripts/eval_parser.py` scores the contract
+  reader field by field against three contracts — a tidy PDF, a Spanish one
+  with `US$3.000` notation and dates in words, and an English one written in
+  prose. The deterministic engine manages 17/24; see
+  [`docs/OPEN_MODEL.md`](docs/OPEN_MODEL.md) for the model's score.
+- **Observability**: engine, model, latency, token counts and cost are recorded
+  per call in `agent_runs` and shown in the Agent log tab.
 
 ---
 
@@ -266,7 +285,9 @@ what works, printing no secrets. You need:
    create a sandbox REST app → `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET`.
 2. `PAYPAL_INVOICER_EMAIL` — the sandbox **business** account that issues the
    invoices. PayPal rejects invoices from anyone else.
-3. An [Anthropic API key](https://platform.claude.com) → `ANTHROPIC_API_KEY`.
+3. The AI engine. Hito's default needs no key — install
+   [Ollama](https://ollama.com/download) and run `ollama pull qwen2.5:3b`.
+   Only set `ANTHROPIC_API_KEY` if you would rather run on Claude.
 4. Optional: a webhook subscribed to `INVOICING.INVOICE.PAID` pointing at
    `https://<your-tunnel>/api/webhooks/paypal`, and its id in
    `PAYPAL_WEBHOOK_ID`. With the id set, every webhook signature is verified
@@ -332,7 +353,7 @@ app/
   db.py                SQLite schema and the event/agent-run ledger
   config.py            .env loading and which mode is live
   agents/
-    llm.py             the one path to Claude: structured outputs, cost accounting, fallbacks
+    llm.py             the one path to a model: local open-source first, Claude optional, rules always
     contract_parser.py agent 1 + a real regex fallback that handles US$3,000 / 3.000 / "October 10, 2026"
     reviewer.py        agent 2 + the seven deterministic checks and the BLOCK/HOLD/APPROVE policy
     collector.py       agent 3 + three hand-written templates, one per tone band, in English and Spanish
@@ -347,9 +368,11 @@ web/                   the frontend source
 data/
   historial_pagos.csv  the 900-row payment history the model learns from (seeded generator)
   contract_laura_*.pdf the sample contract (generated, real text layer)
-docs/                  architecture, demo script, MCP and APIMatic setup, openapi.json
+docs/                  the open-model rationale and benchmark, demo script, MCP
+                       and APIMatic setup, openapi.json
 scripts/
-  check_credentials.py one-command credential smoke test
+  check_credentials.py one-command credential and engine smoke test
+  eval_parser.py       scores the contract reader against three known contracts
   make_dataset.py      regenerates the training data, seeded
   make_demo_pdf.py     regenerates the sample contract PDF, no PDF library
   export_openapi.py    writes docs/openapi.json from the live app
@@ -361,7 +384,8 @@ tests/                 39 tests
 | Tool | Where |
 | --- | --- |
 | **PayPal** | Invoicing v2, Payouts v1, Webhooks — `app/paypal/client.py` |
-| **Claude (Anthropic)** | four agents with structured outputs — `app/agents/` |
+| **Qwen2.5 3B Instruct (Apache-2.0)** | the default engine for all four agents, run locally through Ollama with JSON-schema-constrained outputs — `app/agents/llm.py`, `docs/OPEN_MODEL.md` |
+| **Claude (Anthropic)** | optional drop-in engine for the same four agents — `app/agents/llm.py` |
 | **AG Grid Community** | every table: the editable plan-approval grid, the milestone grid with in-row actions, the risk-sorted invoice grid with a custom meter renderer and pinned totals, the audit trail and the agent log — `web/src/components/grids.tsx` |
 | **APIMatic** | `docs/openapi.json` is generated from the live app and imported to produce SDKs and a docs portal — `docs/APIMATIC.md` |
 | **Render** | `render.yaml`, deploys with or without secrets |

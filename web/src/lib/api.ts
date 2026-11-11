@@ -4,7 +4,9 @@ export interface Modes {
   paypal: "sandbox" | "live" | "mock"
   paypal_live: boolean
   ai: string
+  ai_provider: "ollama" | "claude" | "rules"
   ai_live: boolean
+  ai_local: boolean
   payout_threshold: number
   webhook_verification: boolean
 }

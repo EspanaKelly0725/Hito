@@ -2,6 +2,7 @@ import NumberFlow from "@number-flow/react"
 import {
   BotIcon,
   CircleDollarSignIcon,
+  CloudIcon,
   CpuIcon,
   ServerCogIcon,
   UserRoundIcon,
@@ -199,24 +200,30 @@ export function EngineBadge({
   model?: string
   note?: string
 }) {
-  const isClaude = engine === "claude"
+  const local = engine === "ollama"
+  const claude = engine === "claude"
   return (
     <Tooltip>
       <TooltipTrigger
         render={
           <Badge
             variant="outline"
-            className="gap-1 rounded-sm border-rule font-mono text-[10.5px]"
+            className={cn(
+              "gap-1 rounded-sm border-rule font-mono text-[10.5px]",
+              local && "text-teal"
+            )}
           >
-            {isClaude ? <CpuIcon /> : <ServerCogIcon />}
-            {isClaude ? (model ?? "claude") : "rule engine"}
+            {local ? <CpuIcon /> : claude ? <CloudIcon /> : <ServerCogIcon />}
+            {local || claude ? (model ?? engine) : "rule engine"}
           </Badge>
         }
       />
       <TooltipContent>
-        {isClaude
-          ? `Written by ${model}. Token counts and cost are in the Agent log.`
-          : `Deterministic fallback: ${note ?? "no ANTHROPIC_API_KEY configured"}.`}
+        {local
+          ? `Written by ${model}, an open-source model running on this machine. No API key, no network call, no cost — the contract never leaves the laptop. Tokens and latency are in the Agent log.`
+          : claude
+            ? `Written by ${model}. Token counts and cost are in the Agent log.`
+            : `Deterministic fallback: ${note ?? "no model engine available"}.`}
       </TooltipContent>
     </Tooltip>
   )
@@ -285,18 +292,22 @@ export function ModeBadges({ modes }: { modes: Modes }) {
             <Badge
               variant="outline"
               className={cn(
-                "rounded-sm border-rule font-mono text-[10.5px]",
+                "gap-1 rounded-sm border-rule font-mono text-[10.5px]",
                 modes.ai_live ? "text-teal" : "text-ink-faint"
               )}
             >
+              {modes.ai_local ? <CpuIcon /> : null}
               AI: {modes.ai_live ? modes.ai : "rule engine"}
+              {modes.ai_local ? " · local" : ""}
             </Badge>
           }
         />
         <TooltipContent>
-          {modes.ai_live
-            ? `All four agents call ${modes.ai} with structured outputs.`
-            : "No ANTHROPIC_API_KEY, so every agent is using its deterministic fallback. The flow works; the writing is templated."}
+          {modes.ai_local
+            ? `All four agents run on ${modes.ai}, an open-source model on this machine, constrained by a JSON schema. No API key, no cost, and the contract never leaves the laptop.`
+            : modes.ai_live
+              ? `All four agents call ${modes.ai} with structured outputs.`
+              : "No model engine reachable, so every agent is using its deterministic fallback. The flow works; the writing is templated."}
         </TooltipContent>
       </Tooltip>
 

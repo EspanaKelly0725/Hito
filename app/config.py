@@ -41,7 +41,21 @@ class Settings:
         "PAYPAL_INVOICER_BUSINESS", "Laura Restrepo Design Studio"
     ).strip()
 
-    # Claude ---------------------------------------------------------------
+    # AI -------------------------------------------------------------------
+    # auto = prefer the local open-weights model, fall back to Claude if a key
+    # is configured, fall back to the deterministic engine otherwise.
+    llm_provider: str = os.getenv("HITO_LLM_PROVIDER", "auto").strip().lower()
+
+    # Open-source model, run locally through Ollama. Apache-2.0 weights, no
+    # account, no key, no data leaving the machine.
+    ollama_host: str = os.getenv(
+        "OLLAMA_HOST", "http://127.0.0.1:11434"
+    ).strip().rstrip("/")
+    ollama_model: str = os.getenv("HITO_OLLAMA_MODEL", "qwen2.5:3b").strip()
+    ollama_ctx: int = int(os.getenv("HITO_OLLAMA_CTX", "8192") or 8192)
+    ollama_timeout: float = float(os.getenv("HITO_OLLAMA_TIMEOUT", "180") or 180)
+
+    # Claude, optional.
     anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "").strip()
     model: str = os.getenv("HITO_MODEL", "claude-opus-5-5").strip()
     model_fast: str = os.getenv("HITO_MODEL_FAST", "claude-haiku-5-5").strip()
@@ -67,16 +81,21 @@ class Settings:
         return bool(self.paypal_client_id and self.paypal_client_secret) and not self.force_mock
 
     @property
-    def llm_live(self) -> bool:
+    def claude_configured(self) -> bool:
         return bool(self.anthropic_api_key)
 
     def modes(self) -> dict:
+        from .agents import llm  # local import: llm imports settings
+
+        engine = llm.status()
         return {
             "paypal": "sandbox" if (self.paypal_live and self.paypal_env == "sandbox")
             else ("live" if self.paypal_live else "mock"),
             "paypal_live": self.paypal_live,
-            "ai": self.model if self.llm_live else "rule-based fallback",
-            "ai_live": self.llm_live,
+            "ai": engine["model"],
+            "ai_provider": engine["provider"],
+            "ai_live": engine["live"],
+            "ai_local": engine["provider"] == "ollama",
             "payout_threshold": self.payout_threshold,
             "webhook_verification": bool(self.paypal_webhook_id),
         }

@@ -68,11 +68,11 @@ async def check_paypal() -> bool:
     return True
 
 
-def check_claude() -> bool:
-    if not settings.anthropic_api_key:
-        line(SKIP, "Claude API key",
-             "ANTHROPIC_API_KEY is empty in .env - every agent will use its "
-             "deterministic fallback. The app works; the AI does not.")
+def check_local_model() -> bool:
+    """The default engine: an open-source model running on this machine."""
+    local = llm.ollama_status(force=True)
+    if not local["ok"]:
+        line(SKIP, "Local open-source model", local["detail"])
         return True
 
     schema = {
@@ -91,9 +91,52 @@ def check_claude() -> bool:
              "How many milestones and which currency?",
         schema=schema,
         fallback=lambda: {"milestones_found": -1, "currency": "?"},
+        max_tokens=256,
+    )
+    meta = result.get("_meta", {})
+    if meta.get("engine") != "ollama":
+        line(BAD, "Local open-source model",
+             meta.get("note", "the call did not reach the local model"))
+        return False
+    line(OK, f"Local open-source model ({meta.get('model')})",
+         f"structured output returned milestones_found="
+         f"{result.get('milestones_found')}, currency={result.get('currency')} "
+         f"in {meta.get('latency_ms')} ms "
+         f"({meta.get('input_tokens')} in / {meta.get('output_tokens')} out, "
+         f"no cost, nothing left this machine)")
+    return result.get("milestones_found") == 2
+
+
+def check_claude() -> bool:
+    if not settings.anthropic_api_key:
+        line(SKIP, "Claude API key (optional)",
+             "ANTHROPIC_API_KEY is empty. Hito runs on the local open-source "
+             "model; set a key only if you want Claude as the engine instead.")
+        return True
+
+    schema = {
+        "type": "object",
+        "properties": {
+            "milestones_found": {"type": "integer"},
+            "currency": {"type": "string"},
+        },
+        "required": ["milestones_found", "currency"],
+        "additionalProperties": False,
+    }
+    import os
+    os.environ["HITO_LLM_PROVIDER"] = "claude"
+    settings.llm_provider = "claude"
+    result = llm.call_json(
+        "credential_check",
+        system="You extract payment plans from contracts. Answer only from the text.",
+        user="Contract: two deliverables, US$1,500 each, payable in US dollars. "
+             "How many milestones and which currency?",
+        schema=schema,
+        fallback=lambda: {"milestones_found": -1, "currency": "?"},
         effort="low",
         max_tokens=1000,
     )
+    settings.llm_provider = "auto"
     meta = result.get("_meta", {})
     if meta.get("engine") != "claude":
         line(BAD, "Claude API call", meta.get("note", "fell back to the rule engine"))
@@ -124,13 +167,14 @@ def main() -> int:
     print("Hito - credential and model check\n" + "-" * 58)
     results = [
         asyncio.run(check_paypal()),
+        check_local_model(),
         check_claude(),
         check_risk(),
     ]
     print("-" * 58)
     modes = settings.modes()
     print(f"PayPal gateway : {modes['paypal']}")
-    print(f"AI engine      : {modes['ai']}")
+    print(f"AI engine      : {modes['ai']} ({modes['ai_provider']})")
     print(f"Payout ceiling : USD {modes['payout_threshold']:,.2f}")
     if all(results):
         print("\nEverything checked out. Start the app with:\n"

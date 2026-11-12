@@ -72,23 +72,57 @@ def measure_loudness(exe: str, audio: str) -> dict:
     return stats
 
 
+def stamp(seconds: float) -> str:
+    return (f"{int(seconds // 3600):02d}:{int(seconds // 60 % 60):02d}:"
+            f"{seconds % 60:06.3f}").replace(".", ",")
+
+
 def phrase_starts(exe: str, audio: str) -> None:
-    """Where each spoken phrase begins, so captions can be timed to the voice."""
+    """Where each spoken phrase begins and ends, so captions can be timed.
+
+    silencedetect reports the gaps, not the speech, so the phrases are what
+    falls between them - including the one before the first gap, which a naive
+    reading of silence_end misses entirely because nothing precedes it.
+    """
     out = run([
         exe, "-hide_banner", "-i", audio,
         "-af", "silencedetect=noise=-32dB:d=0.45",
         "-f", "null", "-",
     ])
-    ends = [float(m) for m in re.findall(r"silence_end: ([\d.]+)", out)]
-    starts = [float(m) for m in re.findall(r"silence_start: ([\d.]+)", out)]
-    print(f"\n{len(ends)} phrases detected\n")
-    print(f"{'#':>3}  {'starts':>8}  {'ends':>8}  srt timestamp")
-    for i, start in enumerate(ends, start=1):
-        end = next((s for s in starts if s > start), None)
-        stamp = f"{int(start // 3600):02d}:{int(start // 60 % 60):02d}:" \
-                f"{start % 60:06.3f}".replace(".", ",")
-        print(f"{i:>3}  {start:8.2f}  {end if end else 0:8.2f}  {stamp}")
-    print("\nPaste those into the .srt, one per caption.")
+    duration_match = re.search(r"Duration: (\d+):(\d+):([\d.]+)", out)
+    duration = (
+        int(duration_match.group(1)) * 3600
+        + int(duration_match.group(2)) * 60
+        + float(duration_match.group(3))
+    ) if duration_match else 0.0
+
+    gaps = sorted(
+        zip((float(m) for m in re.findall(r"silence_start: (-?[\d.]+)", out)),
+            (float(m) for m in re.findall(r"silence_end: ([\d.]+)", out)))
+    )
+
+    phrases: list[tuple[float, float]] = []
+    cursor = 0.0
+    for gap_start, gap_end in gaps:
+        if gap_start > cursor + 0.05:
+            phrases.append((cursor, gap_start))
+        cursor = gap_end
+    if duration and cursor < duration - 0.05:
+        phrases.append((cursor, duration))
+
+    if not phrases:
+        print("\nNo speech detected. Is the file silent, or recorded very "
+              "quietly? Try --phrases on a louder take.")
+        return
+
+    print(f"\n{len(phrases)} phrases in {duration:.1f}s of audio\n")
+    print(f"{'#':>3}  {'start':>7}  {'end':>7}  srt timing")
+    for index, (start, end) in enumerate(phrases, start=1):
+        print(f"{index:>3}  {start:7.2f}  {end:7.2f}  "
+              f"{stamp(start)} --> {stamp(end)}")
+    print("\nThose are speech boundaries, not sentence boundaries - one phrase "
+          "can hold two sentences, and a breath mid-sentence splits one. Use "
+          "them as the skeleton and merge by hand.")
 
 
 def main() -> int:

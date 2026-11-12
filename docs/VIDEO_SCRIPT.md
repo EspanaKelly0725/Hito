@@ -19,12 +19,12 @@ el aviso que dice qué está haciendo y retoma en el resultado. Son cuatro corte
 ## 1 · HOOK — 0:00 to 0:22
 
 *(Pantalla fija en el panel de Hito con la factura vencida visible. No te muevas
-todavía. Deja que el 45% y los $1.336 se lean.)*
+todavía. Deja que el 45% y los $1.351 se lean.)*
 
 > Laura is a designer in Medellín. A client in Texas owes her nine thousand
 > dollars, in three payments.
 >
-> She delivered the first one a month ago. The invoice is fourteen days late.
+> She delivered the first one a month ago. The invoice is fifteen days late.
 > And she still has not sent the reminder — because asking for money she has
 > already earned makes her uncomfortable.
 
@@ -104,7 +104,7 @@ segundos. Vuelve a Hito.)*
 
 *(Clic en "Chase with tact". Corta la espera del modelo.)*
 
-> Hito scores how likely it is that this one is never paid. Forty-four percent.
+> Hito scores how likely it is that this one is never paid. Forty-five percent.
 
 *(Se abre el diálogo. Señala el medidor y la escala de bandas.)*
 
@@ -113,7 +113,7 @@ segundos. Vuelve a Hito.)*
 > late. And the number picks the tone. Not Laura's mood on a Tuesday.
 >
 > Under twenty-four percent, a friendly nudge. Over fifty-two, Hito offers to
-> split the balance in two. Forty-four lands in the middle, so the draft is
+> split the balance in two. Forty-five lands in the middle, so the draft is
 > firm: a date, an amount, and the contract clause.
 
 *(Señala la caja ámbar "Check these before sending". Pausa 4 segundos.)*

@@ -57,6 +57,11 @@ services:
         value: https://openrouter.ai/api/v1
       - key: HITO_REMOTE_MODEL
         value: baidu/ernie-5.5-flash-preview:free
+      # Bound our own wait well under any proxy timeout. If the model is slow
+      # the deterministic engine answers instead, which is a worse answer but
+      # an answer; a 502 is neither. Measured: a contract takes ~20s here.
+      - key: HITO_REMOTE_TIMEOUT
+        value: "45"
       # Set this in the dashboard. Without it, the deterministic engine runs.
       - key: HITO_REMOTE_API_KEY
         sync: false

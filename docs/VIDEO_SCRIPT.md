@@ -179,3 +179,46 @@ segundos. Vuelve a Hito.)*
 - [ ] El techo de aprobación bloqueando un pago aparece en pantalla
 - [ ] Sin música ni material de terceros con derechos
 - [ ] Subido a YouTube como **público**
+
+---
+
+# Paso a paso de la grabación
+
+Antes: navegador normal **maximizado** en `http://localhost:8000`, modo claro.
+El modelo debe estar caliente o el primer paso cuesta 50 s extra.
+
+Las esperas marcadas ⏳ son llamadas al modelo local. **No cortes mientras
+grabas** — déjalo correr y las quitas en la edición.
+
+| # | Qué haces | Qué aparece |
+|---|---|---|
+| 1 | Nada. Deja la pantalla vacía 4 s | "Read the contract" y la zona de carga |
+| 2 | Clic en **Use the sample contract** ⏳50-60s | Aviso "Reading contract_laura_bluebonnet.pdf…" |
+| 3 | Espera y deja leer 6 s | Pantalla de aprobación: cliente, total, 100% confianza |
+| 4 | Señala la caja ámbar con el cursor | Las 3 advertencias del contrato |
+| 5 | Señala la columna **Where it says so** | Las citas literales del contrato |
+| 6 | Borra el correo del cliente y pega el del comprador sandbox | `sb-7cci353730281@personal.example.com` |
+| 7 | Clic en **Approve this plan** | Panel con los 3 hitos |
+| 8 | `Ctrl+K`, escribe `seed`, Enter | Historial del cliente sembrado |
+| 9 | Clic en **I delivered this** (tarjeta de arriba) ⏳45-60s | |
+| 10 | Deja el diálogo 8 s | Revisor: 7 comprobaciones + cita del contrato |
+| 11 | Clic en **Open the invoice** | **La factura real en sandbox.paypal.com** |
+| 12 | Deja 5 s y cierra esa pestaña | $3.000 a nombre de Laura Restrepo Design Studio |
+| 13 | Clic en **Done** | Vuelve al panel |
+| 14 | Clic en **Simulate payment** de la primera fila | La tarjeta se vuelve verde: "Money to pass on" |
+| 15 | Clic en **I delivered this** del segundo hito ⏳45-60s | |
+| 16 | Deja 6 s y clic en **Done** | Segundo revisor, segunda factura |
+| 17 | Deja 5 s sobre el panel | **Las tres tarjetas de decisión juntas** |
+| 18 | Clic en **Chase with tact** ⏳45-60s | |
+| 19 | **Deja 12 s.** Es la pantalla clave | Riesgo 45%, factores, caja ámbar cazando invenciones |
+| 20 | Clic en **Not yet** | |
+| 21 | Clic en **Split it** ⏳25-35s | |
+| 22 | Deja 6 s | Andrés $900 en ámbar sin marcar, Mariana $600 marcada |
+| 23 | Marca la casilla de Andrés | Cambia a "Sending $1,500 to 2 of 2" |
+| 24 | Clic en **Approve and send** | |
+| 25 | Pestaña **The model** | Métricas y pesos del modelo |
+| 26 | Arrastra el deslizador *Days past due* | La banda y el tono cambian en vivo |
+| 27 | Pestaña **Audit trail**, baja despacio | La columna "Decided by": agente / Laura / PayPal |
+| 28 | Pestaña **The flow**, sube arriba, deja 8 s | Plano final |
+
+Material en bruto: 8-9 minutos. Cinco esperas que quitar para llegar a 2:50.
